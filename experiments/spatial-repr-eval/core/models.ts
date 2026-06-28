@@ -1,0 +1,46 @@
+/**
+ * Model registry for the eval sweep. Anthropic ids go through the Anthropic SDK;
+ * `provider/model` ids go through the Vercel AI Gateway (one AI_GATEWAY_API_KEY).
+ * `vision` gates the image arm — text-only models simply don't get image tasks.
+ */
+
+export type ModelProvider = "anthropic" | "gateway";
+
+export interface ModelInfo {
+  id: string;
+  label: string;
+  provider: ModelProvider;
+  vision: boolean;
+}
+
+export const MODELS: ModelInfo[] = [
+  { id: "claude-sonnet-4-6", label: "claude-sonnet-4-6", provider: "anthropic", vision: true },
+  { id: "claude-haiku-4-5-20251001", label: "claude-haiku-4-5", provider: "anthropic", vision: true },
+  { id: "openai/gpt-4o", label: "gpt-4o", provider: "gateway", vision: true },
+  { id: "openai/gpt-4o-mini", label: "gpt-4o-mini", provider: "gateway", vision: true },
+  { id: "google/gemini-2.5-flash", label: "gemini-2.5-flash", provider: "gateway", vision: true },
+  { id: "moonshotai/kimi-k2", label: "kimi-k2", provider: "gateway", vision: false },
+  { id: "deepseek/deepseek-chat", label: "deepseek-chat", provider: "gateway", vision: false },
+];
+
+const BY_ID = new Map(MODELS.map((m) => [m.id, m]));
+
+/** Look up a model; unknown ids fall back to gateway (if `provider/model`) or
+ *  Anthropic, vision-on, so a new id still runs. */
+export function modelInfo(id: string): ModelInfo {
+  return (
+    BY_ID.get(id) ?? {
+      id,
+      label: id,
+      provider: id.includes("/") ? "gateway" : "anthropic",
+      vision: true,
+    }
+  );
+}
+
+export function isVisionModel(id: string): boolean {
+  return modelInfo(id).vision;
+}
+
+/** Default benchmark set — every registered model. */
+export const BENCHMARK_MODELS: string[] = MODELS.map((m) => m.id);

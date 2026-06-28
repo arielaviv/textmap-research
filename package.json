@@ -1,0 +1,27 @@
+{
+  "name": "textmap-research",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.71.2",
+    "@monaco-editor/react": "^4.7.0",
+    "@turf/turf": "^7.2.0",
+    "next": "15.5.19",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "pnpm@9.15.2"
+}
