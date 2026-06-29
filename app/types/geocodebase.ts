@@ -57,7 +57,7 @@ export interface AdjacentZones {
 export interface ZoneEquipment {
   id: string;
   symbol: string;
-  type: "co" | "cabinet" | "closure" | "den" | "house" | "pole";
+  type: "co" | "cabinet" | "closure" | "den" | "cabinet-t3" | "house" | "pole";
   coordinates: [number, number];
   gridPosition: [number, number]; // [col, row] in ASCII grid
   properties: Record<string, unknown>;
@@ -946,6 +946,7 @@ export interface NetworkNodeInput {
   label?: string;
   splitterRatio?: string;
   totalFibers?: number;
+  fiberCount?: number;
   ports?: number;
   address?: string;
   /** Building type from OSM (for houses) */
