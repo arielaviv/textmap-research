@@ -141,7 +141,7 @@ export interface ZoneFeature {
     coordinates: [number, number] | [number, number][];
   };
   properties: {
-    nodeType?: "co" | "cabinet" | "closure" | "den" | "house" | "pole";
+    nodeType?: "co" | "cabinet" | "closure" | "den" | "cabinet-t3" | "house" | "pole";
     cableType?: "feeder" | "distribution" | "drop";
     splitterRatio?: string;
     fiberCount?: number;

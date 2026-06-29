@@ -6314,7 +6314,7 @@ export function generateHierarchyTree(equipment: ZoneEquipment[], cables: ZoneFe
     if (!node) return;
 
     const connector = isLast ? "└── " : "├── ";
-    const symbol = SYMBOLS[node.type] || "?";
+    const symbol = SYMBOLS[node.type === "cabinet-t3" ? "cabinet_t3" : node.type] || "?";
 
     let label = `${symbol} ${node.type.toUpperCase()}`;
     if (node.properties.label) {
