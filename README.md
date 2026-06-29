@@ -46,15 +46,33 @@ pnpm dev                     # http://localhost:3000
 ## OSM data
 
 The real-scene routes load pre-indexed OpenStreetMap building/street extracts
-(`osm/buildings/{city}.json`, `osm/streets/{city}.json`) that live in Nexma's
-Cloudflare R2 bucket. That read goes through `lib/datastore/r2-upload.ts`, which:
+(`osm/buildings/{city}.json`, `osm/streets/{city}.json`). The read goes through
+`lib/datastore/r2-upload.ts`, which resolves in this order:
 
-1. reads directly from R2 when the `AWS_*` credentials + `LAKEHOUSE_BUCKET` are set
-   (use the same values Nexma uses — this is the intended path), or
-2. fetches `{OSM_DATA_BASE_URL}/{key}` over HTTP if that's set instead, or
-3. throws — which the OSM services catch, so the eval falls back to synthetic scenes.
+1. **A slice bundled in the repo** at `data/osm/...` — the default, self-contained
+   path. A midtown-Manhattan slice for `new-york` is committed (~3 MB), which covers
+   the area the `nyc` eval samples (center `-73.984,40.7549`, ~350 m boxes).
+2. **Cloudflare R2** when `AWS_*` + `LAKEHOUSE_BUCKET` are set — the same bucket
+   Nexma uses, for full-city scale tests.
+3. **`OSM_DATA_BASE_URL`** over HTTP, if set.
+4. Else it throws, and the OSM services fall back to synthetic scenes.
 
-The extracts are not committed to this repo; they are served from R2.
+### Generating / scaling the slice
+
+OSM is public data, so the slice is fetched from Overpass with no credentials:
+
+```bash
+# default midtown NYC slice (already committed)
+node scripts/fetch-osm.mjs --city new-york
+
+# scale up: a larger bbox (minLon,minLat,maxLon,maxLat)
+node scripts/fetch-osm.mjs --city new-york --bbox -74.02,40.70,-73.93,40.80
+```
+
+It writes `data/osm/buildings/{city}.json` + `data/osm/streets/{city}.json` in the
+exact format the services expect. Commit the result to bundle it. For a true
+full-city scale test, set the R2 credentials instead and let it read Nexma's extract.
+`new-york` and `tel-aviv` have preset bboxes; pass `--bbox` for anything else.
 
 ## Tests
 

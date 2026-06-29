@@ -1,18 +1,19 @@
 /**
- * Read-only R2 (S3-compatible) object reader for textmap-research.
- *
- * The repr-eval real-OSM scenes load pre-indexed OpenStreetMap city extracts
- * (`osm/buildings/{city}.json`, `osm/streets/{city}.json`) that live in Nexma's
- * Cloudflare R2 bucket. This mirrors the product's R2 access (same `AWS_*` creds
- * + `LAKEHOUSE_BUCKET`) but only the GET path the eval needs.
+ * Read-only object reader for the repr-eval OSM extracts
+ * (`osm/buildings/{city}.json`, `osm/streets/{city}.json`).
  *
  * Resolution order for `getObjectText`:
- *   1. If R2 is configured (`AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` +
- *      `AWS_ENDPOINT_URL`), read the object directly from the bucket.
- *   2. Else if `OSM_DATA_BASE_URL` is set, fetch `{base}/{key}` over HTTP.
- *   3. Else throw — callers (the OSM services) catch and degrade to synthetic
+ *   1. A slice bundled in the repo at `data/{key}` (e.g.
+ *      `data/osm/buildings/new-york.json`) — the default, self-contained path.
+ *      Generate/grow slices with `scripts/fetch-osm.mjs`.
+ *   2. Cloudflare R2 if configured (`AWS_*` + `LAKEHOUSE_BUCKET`) — the same
+ *      bucket Nexma uses, for full-city scale tests.
+ *   3. `OSM_DATA_BASE_URL` over HTTP, if set.
+ *   4. Else throw — callers (the OSM services) catch and degrade to synthetic
  *      scenes.
  */
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { GetObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 const BUCKET = process.env.LAKEHOUSE_BUCKET ?? "nexma-lakehouse";
@@ -40,6 +41,12 @@ function getClient(): S3Client {
 }
 
 export async function getObjectText(key: string): Promise<string> {
+  // 1. Bundled slice in the repo (data/osm/...).
+  const localPath = join(process.cwd(), "data", key);
+  if (existsSync(localPath)) {
+    return readFileSync(localPath, "utf-8");
+  }
+
   if (r2Configured()) {
     const res = await getClient().send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
     if (!res.Body) throw new Error(`empty R2 object: ${key}`);
