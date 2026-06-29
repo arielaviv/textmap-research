@@ -40,15 +40,21 @@ pnpm dev                     # http://localhost:3000
 | `ANTHROPIC_API_KEY` | Anthropic key for the chat agent and eval runner. |
 | `AI_GATEWAY_API_KEY` | Vercel AI Gateway key for multi-provider model routing. |
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Mapbox token for building static map image URLs (image representation). |
-| `OSM_DATA_BASE_URL` | *(optional)* Base URL serving pre-indexed OSM city extracts. When unset, real-OSM scenes are unavailable and the app falls back to synthetic scenes. |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_ENDPOINT_URL` / `AWS_REGION` / `LAKEHOUSE_BUCKET` | *(optional)* Cloudflare R2 (S3-compatible) credentials for reading the pre-indexed OSM city extracts from Nexma's bucket. Use the same values Nexma uses. When unset, real-OSM scenes fall back to synthetic. |
+| `OSM_DATA_BASE_URL` | *(optional)* Alternative to the R2 creds: a base URL serving the same `osm/buildings/{city}.json` + `osm/streets/{city}.json` files over HTTP. |
 
 ## OSM data
 
-The real-scene routes load pre-indexed OpenStreetMap building/street extracts. In the
-original application these came from object storage; here that read goes through
-`lib/datastore/r2-upload.ts`, which fetches from `OSM_DATA_BASE_URL` if set and
-otherwise throws — the OSM services catch this and report no data, so the eval still
-runs on synthetic scenes.
+The real-scene routes load pre-indexed OpenStreetMap building/street extracts
+(`osm/buildings/{city}.json`, `osm/streets/{city}.json`) that live in Nexma's
+Cloudflare R2 bucket. That read goes through `lib/datastore/r2-upload.ts`, which:
+
+1. reads directly from R2 when the `AWS_*` credentials + `LAKEHOUSE_BUCKET` are set
+   (use the same values Nexma uses — this is the intended path), or
+2. fetches `{OSM_DATA_BASE_URL}/{key}` over HTTP if that's set instead, or
+3. throws — which the OSM services catch, so the eval falls back to synthetic scenes.
+
+The extracts are not committed to this repo; they are served from R2.
 
 ## Tests
 
