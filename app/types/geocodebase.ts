@@ -575,6 +575,8 @@ export interface InfrastructureBuilding {
   id: string;
   coordinates: [number, number][][];
   centroid: [number, number];
+  /** Optional single-point fallback used when no polygon footprint is present */
+  center?: [number, number];
   type?: "residential" | "commercial" | "industrial";
   /** Street address (from OSM or geocoding) */
   address?: string;
@@ -939,7 +941,7 @@ export interface GenerateDataStoreInput {
 
 export interface NetworkNodeInput {
   id: string;
-  type: "co" | "cabinet" | "closure" | "house" | "pole";
+  type: "co" | "cabinet" | "closure" | "den" | "cabinet-t3" | "house" | "pole";
   position: [number, number];
   label?: string;
   splitterRatio?: string;

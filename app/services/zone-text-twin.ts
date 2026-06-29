@@ -331,6 +331,8 @@ export interface BuildingGridInfo {
   type?: string;
   /** Number of floors if available */
   floors?: number;
+  /** Compass direction the building entrance faces, if inferred */
+  entranceFacing?: string;
 }
 
 /**
@@ -4155,7 +4157,7 @@ export function formatZoneForAgent(
     );
 
     if (cableInventory.length > 0) {
-      const inventorySection = formatCableInventory(cableInventory, true);
+      const inventorySection = formatCableInventory(cableInventory, 1);
       lines.push(inventorySection);
       lines.push("");
     }
@@ -4961,7 +4963,7 @@ export function parseZoneGeoJSON(geojson: ZoneGeoJSON): {
 
 export interface NetworkNode {
   id: string;
-  type: "co" | "cabinet" | "closure" | "den" | "house" | "pole";
+  type: "co" | "cabinet" | "closure" | "den" | "cabinet-t3" | "house" | "pole";
   position: [number, number];
   label?: string;
   splitterRatio?: string;
