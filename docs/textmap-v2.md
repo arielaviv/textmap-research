@@ -201,6 +201,25 @@ on-street 10/12, path 12/12 — accepted and frozen. Lesson: **protocol lines
 earn their place per-line; hints that outlive the defect they patched turn
 into noise.**
 
+## Overnight results (July 9, v2.4 frozen)
+
+- **Sonnet matrix (20 maps):** textmap2 **56.5%** vs json **38.5%** —
+  χ²=19.76, p<0.0001. Crucial twist: sonnet's json score EQUALS haiku's
+  (38.5 vs 38.7) — model capability contributes nothing through raw geometry;
+  it compounds only through the readable representation (47.0 → 56.5).
+  The representation is the bottleneck, not the model.
+- **Scale sweep (3 centers × 4 sizes, haiku):** accuracy equal-or-better at
+  every size while tokens diverge — json 9.5k→18.4k vs textmap2 6.7k→9.7k
+  (47% cheaper at 2800m, equal accuracy). Representation size ratio widens
+  1.48×→2.15× (free char measurement, results/scale-sizes/).
+- **Related-work calibration:** ASCII-grid literature (Text2Space, GRASP,
+  PlanarBench) finds naive ASCII loses to JSON coordinates — consistent with
+  our v1 tie; our claim is what it takes for a text map to WIN (dual coding +
+  exact measurements + per-line-validated protocol). Geospatial benchmarks
+  (GPSBench, MapEval, GS-QA, GeoBenchX) evaluate ON GeoJSON; none engineer an
+  alternative representation with token economics on real maps.
+- Budget: ~$27 of the $50 cap spent; ~$22 left in the account as reserve.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
