@@ -610,8 +610,8 @@ export function toTextMapV2(scene: Scene): string {
   lines.push(
     "HOW TO READ (hypothetical example, NOT from this scene): if LAYER 2 shows marker 'q' at " +
       "(3,1) and LAYER 1 at (3,1) shows '#', that equipment sits INSIDE that building; '=' or '|' " +
-      "there means it sits on a street; ':' or '.' means open ground. The LEGEND's under= field " +
-      "precomputes this lookup for every equipment item.",
+      "there means it sits on a street; ':' or '.' means open ground. The LEGEND's inside= field " +
+      "precomputes building containment exactly for every equipment item.",
   );
   lines.push(
     "GEOMETRY vs TOPOLOGY: the grids show WHERE things are (geometry). WHO connects to whom " +
@@ -620,8 +620,8 @@ export function toTextMapV2(scene: Scene): string {
   );
   lines.push(
     "THRESHOLDS: when a question states a numeric distance (e.g. 'within ~8m'), compare it " +
-      "against the LEGEND's measurements (d_street=, x/y meters) — categorical labels like " +
-      "under=':' are surface descriptions, not distance judgments.",
+      "against the LEGEND's measurements (d_street=, x/y meters) — grid glyphs are drawings, " +
+      "not distance judgments.",
   );
   lines.push("");
   lines.push(
@@ -639,30 +639,24 @@ export function toTextMapV2(scene: Scene): string {
   lines.push("");
   lines.push(
     "LEGEND  (id · marker · cell(col,row) · meters(x,y from SW) · detail; " +
-      "under= is the surface at the entity's EXACT position — '#(B-x)' = inside that " +
-      "building's footprint, '=' = on a street centerline (within 1m), ':' = beside a building, " +
-      "'.' = open ground; d_street= is the exact distance to the nearest street centerline)",
+      "inside= names the building whose footprint contains the entity's EXACT position " +
+      "(none = outside every footprint); d_street= is the exact distance in meters to the " +
+      "nearest street centerline)",
   );
   for (const e of scene.equipment) {
     const [col, row] = toCell(e.position);
     const marker = equipMarker.get(e.id) ?? "?";
-    // ALL of under= derives from exact geometry — never the raster. Mixing
-    // provenances made the legend contradict itself (a street-CELL entity at
-    // d_street=3m showed under== next to d_street=3.0m); every fact in one row
-    // must come from one measurement system.
+    // Exact geometry only. inside= does ONE job — building containment — and
+    // street-ness is conveyed ONLY by the d_street number: categorical surface
+    // labels (":' beside building") kept out-competing the measurement in the
+    // model's reading (probe: 3/8 on-street with labels present).
     let dStreet = Number.POSITIVE_INFINITY;
     for (const st of scene.streets) {
       const d = pointToPolylineMeters(e.position, st.coordinates);
       if (d < dStreet) dStreet = d;
     }
     const inBuilding = scene.buildings.find((b) => pointInPolygon(e.position, b.footprint));
-    const under = inBuilding
-      ? `#(${inBuilding.id})`
-      : Number.isFinite(dStreet) && dStreet <= 1
-        ? "=" // ON the street centerline
-        : surface[row][col] === "#" || surface[row][col] === ":"
-          ? ":" // beside a building
-          : ".";
+    const under = inBuilding ? inBuilding.id : "none";
     const dStreetStr = Number.isFinite(dStreet) ? ` d_street=${dStreet.toFixed(1)}m` : "";
     let detail: string;
     if (e.kind === "co") {
@@ -676,7 +670,7 @@ export function toTextMapV2(scene: Scene): string {
       detail = `${e.kind}${serves}${onStr}${nearStr}`;
     }
     lines.push(
-      `  ${padRight(e.id, 8)} ${marker}  (${col},${row})  x=${xM(e.position)} y=${yM(e.position)}  ${detail} under=${under}${dStreetStr}`,
+      `  ${padRight(e.id, 8)} ${marker}  (${col},${row})  x=${xM(e.position)} y=${yM(e.position)}  ${detail} inside=${under}${dStreetStr}`,
     );
   }
   scene.buildings.forEach((b, bi) => {
