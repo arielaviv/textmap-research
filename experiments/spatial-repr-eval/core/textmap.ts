@@ -11,6 +11,19 @@
  *      so the model never has to count columns for an accurate answer, and the
  *      grid/legend/answer namespaces all agree.
  *
+ * `toTextMapV2` is the second-generation grid targeting two known LLM failure
+ * modes of v1 (kept frozen as the ablation baseline — same legend, new grid):
+ *
+ *   - OCCLUSION: v1 paints one canvas, so an equipment glyph overwrites the '#'
+ *    underneath and a cable is not drawn through buildings at all — the render
+ *    destroys exactly the evidence containment/crossing questions need. v2 uses
+ *    two ALIGNED LAYERS (geography / network) like any real GIS: the network
+ *    layer draws positions and full cable paths unoccluded, and cross-layer
+ *    lookup at the same (col,row) recovers what sits under what.
+ *   - TOKENIZATION: BPE merges runs ("....####....") into blobs, destroying
+ *    column identity before the model reads it. v2 space-separates cells so
+ *    each cell keeps its own token and rulers align 1:1 with content.
+ *
  * Pure + dependency-light (only ./geo) so it unit-tests without pulling the
  * heavy zone-text-twin module that representations.ts imports.
  */
