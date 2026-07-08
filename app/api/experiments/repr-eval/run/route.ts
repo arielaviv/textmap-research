@@ -24,7 +24,11 @@ import {
   type SyntheticSpec,
 } from "@/experiments/spatial-repr-eval/core/scene";
 import { makeSpecs } from "@/experiments/spatial-repr-eval/core/specs";
-import { aggregate, aggregateByModel } from "@/experiments/spatial-repr-eval/core/stats";
+import {
+  aggregate,
+  aggregateByModel,
+  aggregateByScale,
+} from "@/experiments/spatial-repr-eval/core/stats";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 800;
@@ -90,11 +94,16 @@ export async function POST(req: Request) {
       ? Math.max(1, Math.min(body.n ?? 1, 30))
       : Math.max(1, Math.min(body.n ?? 5, 80));
 
+  const scaleLevels = body.scale?.filter((s) => Number.isFinite(s) && s > 0) ?? [];
   const activeQuestionCount = selectQuestions(body.questionIds).length;
   // Non-vision models skip the image arm, so count arms per model.
   const armsFor = (m: string) => arms.filter((a) => a !== "image" || isVisionModel(m)).length;
   const totalCalls =
-    n * repeats * activeQuestionCount * models.reduce((sum, m) => sum + armsFor(m), 0);
+    n *
+    Math.max(1, scaleLevels.length) *
+    repeats *
+    activeQuestionCount *
+    models.reduce((sum, m) => sum + armsFor(m), 0);
   if (totalCalls > MAX_CALLS) {
     return NextResponse.json(
       { error: `Refusing ${totalCalls} model calls (cap ${MAX_CALLS}). Lower n/repeats/models.` },
@@ -104,7 +113,7 @@ export async function POST(req: Request) {
 
   let scenes: Scene[];
   try {
-    scenes = await buildScenes(source, { ...body, n, seed });
+    scenes = await buildScenes(source, { ...body, n, seed, scale: scaleLevels });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "failed to build scenes" },
@@ -137,10 +146,12 @@ export async function POST(req: Request) {
       seed,
       isolate,
       questionIds: body.questionIds ?? null,
+      scale: scaleLevels.length ? scaleLevels : null,
       totalCalls,
     },
     aggregate: aggregate(items),
     perModel: aggregateByModel(items),
+    ...(scaleLevels.length ? { perScale: aggregateByScale(items) } : {}),
     items,
     // The prompt/question maps are large (a real-scene json arm is 50-80KB), so
     // they ship only when the caller asks — the batch driver's run log does.
@@ -148,33 +159,72 @@ export async function POST(req: Request) {
   });
 }
 
+/** Building budget per AOI size: grows with the square root of the area's linear
+ *  scale, capped at 40 (marker letters exhaust at 26; ids/legend stay exact). */
+function capForSize(sizeM: number): number {
+  return Math.min(40, Math.round(12 * Math.sqrt(sizeM / 350)));
+}
+
 async function buildScenes(
   source: "synthetic" | "real",
-  body: RunBody & { n: number; seed: number },
+  body: RunBody & { n: number; seed: number; scale: number[] },
 ): Promise<Scene[]> {
   if (source === "real") {
     const city = body.city ?? "nyc";
     const out: Scene[] = [];
+    // Scale sweep: the SAME n centers (seed-jittered), each at every AOI size —
+    // "the same map, larger". No sweep = one ~350m scene per seed.
+    const sizes = body.scale.length ? body.scale : [350];
     for (let i = 0; i < body.n; i++) {
-      // Skip AOIs that land on water/parks (no buildings) so one bad seed in a
-      // 20-scene batch doesn't fail the whole run.
-      try {
-        const { buildings, streets } = await fetchRealOSM(city, body.seed + i);
-        // Always plant one on-road closure so the road_misplacement question has a
-        // guaranteed misplacement to find (real scenes also have coincidental ones).
-        const plant = {
-          ...(body.n === 1 ? body.plant : ROTATE[i % ROTATE.length]),
-          closureOnStreet: true,
-        };
-        out.push(buildRealScene({ id: `scene-${i}`, buildings, streets, maxBuildings: 12, plant }));
-      } catch {
-        // no buildings in this AOI — skip it
+      for (const sizeM of sizes) {
+        // Skip AOIs that land on water/parks (no buildings) so one bad seed in a
+        // 20-scene batch doesn't fail the whole run.
+        try {
+          const { buildings, streets } = await fetchRealOSM(city, body.seed + i, sizeM);
+          // Always plant one on-road closure so the road_misplacement question has a
+          // guaranteed misplacement to find (real scenes also have coincidental ones).
+          const plant = {
+            ...(body.n === 1 ? body.plant : ROTATE[i % ROTATE.length]),
+            closureOnStreet: true,
+          };
+          const scene = buildRealScene({
+            id: body.scale.length ? `scene-${i}-s${sizeM}` : `scene-${i}`,
+            buildings,
+            streets,
+            maxBuildings: capForSize(sizeM),
+            spread: sizeM > 350,
+            plant,
+          });
+          if (body.scale.length) scene.sizeM = sizeM;
+          out.push(scene);
+        } catch {
+          // no buildings in this AOI — skip it
+        }
       }
     }
     if (out.length === 0) throw new Error("no buildable scenes — try a different seed/city");
     return out;
   }
   // synthetic
+  if (body.scale.length) {
+    // Scale levels = blocks per side (e.g. 2,3,4,5), same seeds at every level.
+    const out: Scene[] = [];
+    for (let i = 0; i < body.n; i++) {
+      for (const lvl of body.scale) {
+        const blocks = Math.max(1, Math.min(Math.round(lvl), 8));
+        const scene = makeSyntheticScene({
+          id: `scene-${i}-b${blocks}`,
+          seed: body.seed + i * 17,
+          blocksX: blocks,
+          blocksY: blocks,
+          plant: { ...ROTATE[i % ROTATE.length], closureOnStreet: true },
+        });
+        scene.sizeM = blocks;
+        out.push(scene);
+      }
+    }
+    return out;
+  }
   if (body.spec) {
     return [makeSyntheticScene({ ...body.spec, plant: { ...body.spec.plant, closureOnStreet: true } })];
   }

@@ -35,6 +35,8 @@ interface PreviewBody {
   seed?: number;
   blocksX?: number;
   blocksY?: number;
+  /** Real scenes: AOI size in meters (scale-sweep eyeballing). Default ~350. */
+  sizeM?: number;
   plant?: {
     closureInBuilding?: boolean;
     cableCrossing?: boolean;
@@ -54,12 +56,14 @@ export async function POST(req: Request) {
   let scene: Scene;
   try {
     if (body.source === "real") {
-      const { buildings, streets } = await fetchRealOSM(body.city ?? "nyc", body.seed ?? 42);
+      const sizeM = body.sizeM && body.sizeM > 0 ? body.sizeM : 350;
+      const { buildings, streets } = await fetchRealOSM(body.city ?? "nyc", body.seed ?? 42, sizeM);
       scene = buildRealScene({
         id: "preview",
         buildings,
         streets,
-        maxBuildings: 12,
+        maxBuildings: Math.min(40, Math.round(12 * Math.sqrt(sizeM / 350))),
+        spread: sizeM > 350,
         plant: body.plant,
       });
     } else {

@@ -113,6 +113,37 @@ export function aggregateByModel(items: ItemResult[]): ModelAggregate[] {
   return models.map((model) => ({ model, ...aggregate(items.filter((r) => r.model === model)) }));
 }
 
+/** One row per (scale level, arm) — the accuracy-vs-tokens curve of the scale sweep. */
+export interface ScaleArmSummary extends Proportion {
+  scaleM: number;
+  arm: string;
+  avgInputTokens: number;
+  avgOutputTokens: number;
+  avgLatencyMs: number;
+}
+
+export function aggregateByScale(items: ItemResult[]): ScaleArmSummary[] {
+  const scaled = items.filter((r) => r.scaleM != null);
+  const levels = [...new Set(scaled.map((r) => r.scaleM as number))].sort((a, b) => a - b);
+  const arms = [...new Set(scaled.map((r) => r.arm))];
+  const out: ScaleArmSummary[] = [];
+  for (const scaleM of levels) {
+    for (const arm of arms) {
+      const rows = scaled.filter((r) => r.scaleM === scaleM && r.arm === arm);
+      if (!rows.length) continue;
+      out.push({
+        scaleM,
+        arm,
+        ...wilson(rows.filter((r) => r.correct).length, rows.length),
+        avgInputTokens: Math.round(rows.reduce((s, r) => s + r.inputTokens, 0) / rows.length),
+        avgOutputTokens: Math.round(rows.reduce((s, r) => s + r.outputTokens, 0) / rows.length),
+        avgLatencyMs: Math.round(rows.reduce((s, r) => s + r.latencyMs, 0) / rows.length),
+      });
+    }
+  }
+  return out;
+}
+
 function key(r: ItemResult): string {
   return `${r.sceneId}|${r.questionId}|${r.model}|${r.repeat}`;
 }

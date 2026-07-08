@@ -27,6 +27,11 @@ export interface RealSceneInput {
   buildings: RawBuilding[];
   streets: RawStreet[];
   maxBuildings?: number;
+  /** Stratified building selection: pick one building per grid cell across the
+   *  whole AOI instead of the `cap` nearest the centroid. Essential for scale
+   *  sweeps — at Manhattan density the nearest-centroid pick collapses to a
+   *  ~200m cluster no matter how large the AOI is. */
+  spread?: boolean;
   plant?: {
     closureInBuilding?: boolean;
     cableCrossing?: boolean;
@@ -79,10 +84,55 @@ export function buildRealScene(input: RealSceneInput): Scene {
     (a, b) => haversineMeters(a.centroid, center) - haversineMeters(b.centroid, center),
   );
   const chosen: typeof sorted = [];
-  for (const b of sorted) {
-    if (chosen.length >= cap) break;
-    if (chosen.some((c) => haversineMeters(c.centroid, b.centroid) < MIN_SEP_M)) continue;
-    chosen.push(b);
+  if (input.spread) {
+    // One building per grid cell across the buildings' bbox (nearest the cell
+    // center), deterministic, so the chosen set grows WITH the AOI.
+    const bb = boundsOf(all.map((b) => b.centroid));
+    const k = Math.ceil(Math.sqrt(cap));
+    const cellW = (bb.maxLng - bb.minLng) / k || 1e-9;
+    const cellH = (bb.maxLat - bb.minLat) / k || 1e-9;
+    const taken = new Set<string>();
+    for (let cy = 0; cy < k && chosen.length < cap; cy++) {
+      for (let cx = 0; cx < k && chosen.length < cap; cx++) {
+        const cc: Coord = [bb.minLng + (cx + 0.5) * cellW, bb.minLat + (cy + 0.5) * cellH];
+        let best: (typeof all)[number] | null = null;
+        let bestD = Number.POSITIVE_INFINITY;
+        for (const b of all) {
+          if (taken.has(b.id)) continue;
+          if (
+            b.centroid[0] < bb.minLng + cx * cellW ||
+            b.centroid[0] > bb.minLng + (cx + 1) * cellW ||
+            b.centroid[1] < bb.minLat + cy * cellH ||
+            b.centroid[1] > bb.minLat + (cy + 1) * cellH
+          ) {
+            continue;
+          }
+          const d = haversineMeters(b.centroid, cc);
+          if (d < bestD) {
+            bestD = d;
+            best = b;
+          }
+        }
+        if (best && !chosen.some((c) => haversineMeters(c.centroid, best!.centroid) < MIN_SEP_M)) {
+          chosen.push(best);
+          taken.add(best.id);
+        }
+      }
+    }
+    // Empty cells (parks, water) leave a remainder — fill nearest-centroid.
+    for (const b of sorted) {
+      if (chosen.length >= cap) break;
+      if (taken.has(b.id)) continue;
+      if (chosen.some((c) => haversineMeters(c.centroid, b.centroid) < MIN_SEP_M)) continue;
+      chosen.push(b);
+      taken.add(b.id);
+    }
+  } else {
+    for (const b of sorted) {
+      if (chosen.length >= cap) break;
+      if (chosen.some((c) => haversineMeters(c.centroid, b.centroid) < MIN_SEP_M)) continue;
+      chosen.push(b);
+    }
   }
 
   const buildings: SceneBuilding[] = chosen.map((b, i) => ({
@@ -237,10 +287,14 @@ export function cityList(): string[] {
   return Object.keys(CITY_CENTERS);
 }
 
-/** A ~350m AOI around the city center, jittered by seed so different seeds sample different blocks. */
+/** An AOI of `sizeM` meters (default ~350m) around the city center, jittered by
+ *  seed so different seeds sample different blocks. The jitter depends ONLY on
+ *  the seed — every size level of one seed shares the same center, which is what
+ *  makes a scale sweep "the same map, larger". */
 export function aoiForCity(
   city: string,
   seed: number,
+  sizeM = 350,
 ): { minLat: number; minLon: number; maxLat: number; maxLon: number } {
   const center = CITY_CENTERS[city] ?? CITY_CENTERS.nyc;
   // deterministic small jitter from seed (±~1km)
@@ -248,6 +302,12 @@ export function aoiForCity(
   const jLat = (((seed * 91) % 100) / 100 - 0.5) * 0.02;
   const lng = center[0] + jLng;
   const lat = center[1] + jLat;
-  const half = 0.00175; // ~350m total box
-  return { minLon: lng - half, maxLon: lng + half, minLat: lat - half, maxLat: lat + half };
+  const halfLat = sizeM / 2 / 110540;
+  const halfLng = sizeM / 2 / (111320 * Math.cos((lat * Math.PI) / 180));
+  return {
+    minLon: lng - halfLng,
+    maxLon: lng + halfLng,
+    minLat: lat - halfLat,
+    maxLat: lat + halfLat,
+  };
 }

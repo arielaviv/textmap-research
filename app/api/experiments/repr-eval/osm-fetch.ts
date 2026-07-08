@@ -72,6 +72,7 @@ export async function fetchRealOSMByAoi(
 export async function fetchRealOSM(
   city: string,
   seed: number,
+  sizeM?: number,
 ): Promise<{ buildings: RawBuilding[]; streets: RawStreet[] }> {
-  return fetchRealOSMByAoi(city, aoiForCity(city, seed));
+  return fetchRealOSMByAoi(city, aoiForCity(city, seed, sizeM));
 }
