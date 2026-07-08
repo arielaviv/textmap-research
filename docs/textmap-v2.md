@@ -185,6 +185,22 @@ and a measurement describe the same fact, the label wins the model's attention
 ≥80%; overall textmap2 ≥ +6 points over json with McNemar p < 0.05 on
 uncorrelated items; crossing stays weak (~10–20%) pending a structural idea.
 
+## Certification + ablation (overnight, July 8–9)
+
+**CERTIFIED (60 distinct real maps × 1 repeat, haiku, isolate):**
+textmap2 47.0% vs json 38.7% — McNemar b=108 c=58, χ²=14.46, **p=0.0001** on
+uncorrelated items. This is the paper's headline statistic.
+
+**Protocol ablation (20 maps, textmap2 vs textmap2np=headers stripped):**
+overall a wash (46.5% vs 45.0%, p=0.71) — but category-level it decomposes:
+geometry-vs-topology line +35 points on path (90% vs 55%), +10 containment;
+THRESHOLDS line −15 on-street / −8 mixed (it patched a conflict the `inside=`
+data fix had already removed — leftover teaching prose became noise).
+**v2.4 = drop THRESHOLDS, keep the other three lines.** Probe (12 scenes):
+on-street 10/12, path 12/12 — accepted and frozen. Lesson: **protocol lines
+earn their place per-line; hints that outlive the defect they patched turn
+into noise.**
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
