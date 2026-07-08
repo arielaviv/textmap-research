@@ -43,6 +43,9 @@ export interface RepresentationBundle {
   /** v2 grid (aligned layers, one token per cell) — same legend as textmap,
    *  so the textmap vs textmap2 comparison isolates pure grid design. */
   textmap2: string;
+  /** v2 with the reading-protocol header lines stripped (data identical) —
+   *  the ablation isolating protocol contribution. */
+  textmap2np: string;
   wkt: string;
   verdict: string;
   image: { base64: string; mediaType: "image/png" } | null;
@@ -297,6 +300,7 @@ export async function buildRepresentations(scene: Scene): Promise<Representation
     ascii: toAscii(scene),
     textmap: toTextMap(scene),
     textmap2: toTextMapV2(scene),
+    textmap2np: toTextMapV2(scene, { protocol: false }),
     wkt: toWKT(scene),
     verdict: toVerdict(scene),
     image,
