@@ -130,6 +130,31 @@ Caveats: one scene, one repeat — the full 20-map run turns this into
 statistics; v2 costs ~55% more input tokens than json on small synthetic
 scenes (the token win is scale-conditional).
 
+## v2.2 amendment — after the first full 20-map real run (haiku, 1,200 calls)
+
+**Result: exact tie, 40.2% vs 40.2% — the synthetic win did NOT transfer.**
+Category split: textmap2 dominated entity-local categories (containment 95% vs
+58%, on-street 100% vs 50%) but collapsed on crossing (5% vs 45%) and path
+(60% vs 100%), cancelling out. Run-log inspection showed both collapses were
+DOCUMENTATION defects in the representation's own header:
+
+- crossing: the CROSS-REFERENCE rule said "cable glyph over '#' crosses it"
+  with no own-terminal exclusion — drops end INSIDE the building they serve, so
+  the model faithfully reported its own drop cables. Rule now states the
+  exclusion and points at CABLES source -> target.
+- path: the model TRACED the drawn glyphs across the grid instead of reading
+  `serves=` — nothing said the grid is geometry while topology lives in the
+  legend. New GEOMETRY vs TOPOLOGY header line.
+- scene fix (all arms equally): real scenes snapped EVERY closure onto the
+  centerline, making road_misplacement degenerate (the whole roster ≤2m).
+  Closures now sit ~4m off-centerline toward their building (sidewalk); only
+  the planted closureOnStreet stays at 0m.
+
+**Prediction (pre-run, v2.2 haiku 20-map):** crossing recovers to ≥ json,
+path recovers to ~100% (legend read), road_misplacement becomes meaningful and
+textmap2 wins it via d_street; overall textmap2 breaks the tie decisively while
+json stays ~40%.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

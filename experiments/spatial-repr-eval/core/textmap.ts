@@ -603,13 +603,20 @@ export function toTextMapV2(scene: Scene): string {
   );
   lines.push(
     "CROSS-REFERENCE: the layers share coordinates. Look up the SAME (col,row) in both layers: " +
-      "an equipment marker over '#' in LAYER 1 sits INSIDE that building; a cable glyph over '#' CROSSES it.",
+      "an equipment marker over '#' in LAYER 1 sits INSIDE that building; a cable glyph over '#' " +
+      "crosses that building — UNLESS that building is the cable's own source or target " +
+      "(a drop legitimately ENDS inside the building it serves; check CABLES source -> target).",
   );
   lines.push(
     "HOW TO READ (hypothetical example, NOT from this scene): if LAYER 2 shows marker 'q' at " +
       "(3,1) and LAYER 1 at (3,1) shows '#', that equipment sits INSIDE that building; '=' or '|' " +
       "there means it sits on a street; ':' or '.' means open ground. The LEGEND's under= field " +
       "precomputes this lookup for every equipment item.",
+  );
+  lines.push(
+    "GEOMETRY vs TOPOLOGY: the grids show WHERE things are (geometry). WHO connects to whom " +
+      "(topology) is in the LEGEND — each closure's serves= list and the CABLES section's " +
+      "source -> target. For connectivity/path questions, read the LEGEND; do not trace glyphs.",
   );
   lines.push("");
   lines.push(

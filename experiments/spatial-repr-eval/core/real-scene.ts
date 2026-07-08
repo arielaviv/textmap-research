@@ -198,6 +198,19 @@ export function buildRealScene(input: RealSceneInput): Scene {
     });
   }
 
+  // Closures sit on the SIDEWALK — ~4m from the centerline toward the building
+  // they serve — not ON the street. Snapping them all to the centerline made
+  // "which equipment is in the road" degenerate (answer: the entire roster);
+  // only the deliberately planted closureOnStreet belongs at 0m.
+  const sidewalk = (pt: Coord, toward: Coord): Coord => {
+    const dx = toward[0] - pt[0];
+    const dy = toward[1] - pt[1];
+    const distM = haversineMeters(pt, toward);
+    if (!Number.isFinite(distM) || distM < 1) return pt;
+    const t = Math.min(4 / distM, 0.35); // 4m, capped well short of the centroid
+    return [pt[0] + dx * t, pt[1] + dy * t];
+  };
+
   // Closures lettered (CL-A, CL-B, …) in creation order so the id matches the
   // map/grid marker (buildings stay numeric: B-0). cli = closure push order.
   let cli = 0;
@@ -206,7 +219,7 @@ export function buildRealScene(input: RealSceneInput): Scene {
     const closure: SceneEquipment = {
       id: `CL-${CLOSURE_LETTERS[cli] ?? cli}`,
       kind: "closure",
-      position: snap(b.centroid),
+      position: sidewalk(snap(b.centroid), b.centroid),
       serves: [b.id],
     };
     cli++;
