@@ -22,6 +22,7 @@ import {
   nearestClosureOffStreet,
   nearestClosureToBuilding,
   nearestStreetIsNamed,
+  ORACLE_CONSTANTS,
   pathToSource,
 } from "./oracle";
 import type { Scene, SceneBuilding, SceneEquipment } from "./scene";
@@ -194,10 +195,14 @@ export const QUESTIONS: Question[] = [
     // Tests whether the representation helps the search the data-only agent botched.
     id: "road_misplacement",
     category: "mixed",
+    // The grading threshold is stated in the prompt (like onstreet's ~8m) — a
+    // question must carry its own judgment criterion or it tests threshold
+    // guessing, not spatial reading. Kept in sync with the oracle constant.
     prompt: () =>
-      "Some equipment may be misplaced INTO a road — sitting on a street centerline / in the " +
-      "carriageway instead of on a sidewalk or verge. List the ids of every such equipment item " +
-      "(exclude the central office). Fill `equipmentIds` (empty array if none).",
+      `Some equipment may be misplaced INTO a road — within ~${ORACLE_CONSTANTS.IN_ROAD_M}m of a ` +
+      "street centerline (in the carriageway) instead of on a sidewalk or verge. List the ids of " +
+      "every such equipment item (exclude the central office). Fill `equipmentIds` " +
+      "(empty array if none).",
     grade: (scene, a) => setEqual(a.equipmentIds ?? [], equipmentInRoad(scene)),
   },
   {

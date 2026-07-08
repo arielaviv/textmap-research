@@ -75,6 +75,18 @@ verdict arm is measurements-vs-predicates plus entity-local-vs-global-scan.
 for textmap2; blockage/enclosure remain grid-procedural and likely still fail
 one-shot on haiku.
 
+**Run 3 (20 calls):** textmap2 7/10 vs json 4/10 — containment ✓ and onstreet ✓
+flipped as predicted; road_misplacement did NOT (model answered `[]`).
+Root cause was a QUESTION defect, not a representation defect: the oracle grades
+"in road" at ≤3m but the prompt never stated the threshold (unlike onstreet's
+"~8m") — no arm can know the grader's cutoff, and every arm failed it. Fixed
+the prompt for ALL arms equally (threshold now quoted from `ORACLE_CONSTANTS`).
+Principle recorded: **a question must carry its own judgment criterion**, or it
+tests threshold-guessing rather than spatial reading.
+**Prediction (pre-run 4):** road_misplacement flips for textmap2 (reads
+`d_street=`); json likely still fails it (must derive 9 point-to-polyline
+distances from raw coordinates one-shot).
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
