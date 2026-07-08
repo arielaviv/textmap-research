@@ -110,6 +110,26 @@ the hull BOUNDARY (≤1m), not hull-vertex membership. Selftest 9/9 after fix.
 **Prediction (pre-run 6):** enclosure flips for BOTH arms (their answers were
 already correct).
 
+**Runs 6–8:** enclosure oracle fix confirmed (sonnet answers B-1-1 on both
+arms = correct now); haiku answers `[]` on both — a genuine capability floor,
+not a representation issue. One more representation defect found and fixed:
+`under=` mixed provenances (raster street-cell vs exact d_street) and the two
+fields could contradict each other in one row — sonnet followed the raster char
+and over-answered. All `under=` facts now derive from exact geometry only
+(`=` means d_street ≤ 1m). **Final single-scene scoreboard (isolate, seed 42):**
+
+| model | json | textmap2 |
+|---|---|---|
+| haiku-4.5 | 4/10 | **8/10** |
+| sonnet-4.6 | 8/10 | **9/10** (blockage solved on grid only) |
+
+Consistent with H4: the representation buys the most for the cheapest model
+(haiku+textmap2 = sonnet+json), and the residual haiku failures
+(blockage, enclosure) are procedural-geometry questions that sonnet solves.
+Caveats: one scene, one repeat — the full 20-map run turns this into
+statistics; v2 costs ~55% more input tokens than json on small synthetic
+scenes (the token win is scale-conditional).
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
