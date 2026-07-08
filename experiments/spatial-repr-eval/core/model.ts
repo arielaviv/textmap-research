@@ -43,6 +43,7 @@ export async function askModel(input: AskInput): Promise<AskResult> {
 
 async function askAnthropic(input: AskInput): Promise<AskResult> {
   const client = new Anthropic({ apiKey: input.apiKey });
+  const info = modelInfo(input.model);
 
   const content: Anthropic.ContentBlockParam[] = [
     { type: "text", text: `MAP REPRESENTATION:\n${input.representation.text}` },
@@ -63,9 +64,14 @@ async function askAnthropic(input: AskInput): Promise<AskResult> {
   try {
     const resp = await client.messages.create({
       model: input.model,
-      max_tokens: 1024,
-      temperature: input.temperature,
-      system: SYSTEM,
+      // Always-thinking models (Fable 5) spend thinking tokens inside max_tokens;
+      // 1024 would truncate before the tool call.
+      max_tokens: info.maxTokens ?? 1024,
+      // Opus 4.7+/Fable 5 reject sampling params with a 400 — omit temperature.
+      ...(info.acceptsTemperature !== false ? { temperature: input.temperature } : {}),
+      system: info.alwaysThinking
+        ? `${SYSTEM} You MUST call submit_answer exactly once with your final answer.`
+        : SYSTEM,
       tools: [
         {
           name: "submit_answer",
@@ -73,7 +79,9 @@ async function askAnthropic(input: AskInput): Promise<AskResult> {
           input_schema: ANSWER_TOOL_SCHEMA as unknown as Anthropic.Tool["input_schema"],
         },
       ],
-      tool_choice: { type: "tool", name: "submit_answer" },
+      // Forced tool_choice conflicts with thinking; on always-thinking models fall
+      // back to auto + the MUST-call instruction (a null answer grades as error).
+      ...(info.alwaysThinking ? {} : { tool_choice: { type: "tool" as const, name: "submit_answer" } }),
       messages: [{ role: "user", content }],
     });
 
@@ -130,6 +138,7 @@ async function askGateway(input: AskInput): Promise<AskResult> {
   }
   userContent.push({ type: "text", text: `QUESTION:\n${input.question}` });
 
+  const info = modelInfo(input.model);
   const t0 = Date.now();
   try {
     const res = await fetch(GATEWAY_URL, {
@@ -137,8 +146,8 @@ async function askGateway(input: AskInput): Promise<AskResult> {
       headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
       body: JSON.stringify({
         model: input.model,
-        temperature: input.temperature,
-        max_tokens: 1024,
+        ...(info.acceptsTemperature !== false ? { temperature: input.temperature } : {}),
+        max_tokens: info.maxTokens ?? 1024,
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: userContent },

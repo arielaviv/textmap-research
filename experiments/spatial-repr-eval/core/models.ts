@@ -11,14 +11,41 @@ export interface ModelInfo {
   label: string;
   provider: ModelProvider;
   vision: boolean;
+  /** False for models that reject sampling params (Opus 4.7+/Fable 5 return 400
+   *  on `temperature`) — the caller must omit it. Default true. */
+  acceptsTemperature?: boolean;
+  /** Max output tokens per call. Models with always-on thinking spend thinking
+   *  tokens INSIDE this budget, so they need far more than the answer size. */
+  maxTokens?: number;
+  /** Always-on thinking (Fable 5): thinking can't be disabled and historically
+   *  conflicts with forced tool_choice — use auto + a MUST-call instruction. */
+  alwaysThinking?: boolean;
 }
 
 export const MODELS: ModelInfo[] = [
-  { id: "claude-sonnet-4-6", label: "claude-sonnet-4-6", provider: "anthropic", vision: true },
+  // Anthropic ladder: cheap → frontier (the cheap-model+representation story).
   { id: "claude-haiku-4-5-20251001", label: "claude-haiku-4-5", provider: "anthropic", vision: true },
+  { id: "claude-sonnet-4-6", label: "claude-sonnet-4-6", provider: "anthropic", vision: true },
+  {
+    id: "claude-opus-4-8",
+    label: "claude-opus-4-8",
+    provider: "anthropic",
+    vision: true,
+    acceptsTemperature: false,
+  },
+  {
+    id: "claude-fable-5",
+    label: "claude-fable-5",
+    provider: "anthropic",
+    vision: true,
+    acceptsTemperature: false,
+    alwaysThinking: true,
+    maxTokens: 16000,
+  },
   { id: "openai/gpt-4o", label: "gpt-4o", provider: "gateway", vision: true },
   { id: "openai/gpt-4o-mini", label: "gpt-4o-mini", provider: "gateway", vision: true },
   { id: "google/gemini-2.5-flash", label: "gemini-2.5-flash", provider: "gateway", vision: true },
+  { id: "google/gemini-2.5-pro", label: "gemini-2.5-pro", provider: "gateway", vision: true },
   { id: "moonshotai/kimi-k2", label: "kimi-k2", provider: "gateway", vision: false },
   { id: "deepseek/deepseek-chat", label: "deepseek-chat", provider: "gateway", vision: false },
 ];
