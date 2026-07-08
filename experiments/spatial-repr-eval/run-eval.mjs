@@ -29,7 +29,7 @@ const n = Number(arg("n", smoke ? "5" : "30"));
 const models = arg("models", "claude-sonnet-4-6")
   .split(",")
   .map((s) => s.trim());
-const arms = arg("arms", "json,ascii,textmap,wkt,image,verdict")
+const arms = arg("arms", "json,ascii,textmap,textmap2,wkt,image,verdict")
   .split(",")
   .map((s) => s.trim());
 const repeats = Number(arg("repeats", "1"));

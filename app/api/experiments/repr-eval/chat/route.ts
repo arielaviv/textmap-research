@@ -50,8 +50,11 @@ const SYSTEM =
   "buildings.json, streets.json, layers/equipment.geojson (a central office 'co' plus 'closure's, " +
   "each with a `serves` list), layers/cables.geojson (feeder/distribution/drop cables, " +
   "source -> target). NOTE: basemap.txt (empty geography canvas — use it to find where equipment " +
-  "CAN go) and textmap.txt (the current design on that canvas + legend) are READ-ONLY derived " +
-  "views — never edit them; edit the structured json/geojson files instead, and both maps + the " +
+  "CAN go), textmap.txt (the current design on that canvas + legend) and textmap-v2.txt (the " +
+  "same design as TWO ALIGNED LAYERS — geography / network drawn unoccluded, one symbol per " +
+  "space-separated cell; cross-reference layers at the same (col,row): equipment over '#' is " +
+  "INSIDE that building, a cable glyph over '#' CROSSES it) are READ-ONLY derived " +
+  "views — never edit them; edit the structured json/geojson files instead, and the maps + the " +
   "map image re-render automatically. Coordinates are [lng, lat]; use the textmap's GRID REF line " +
   "to convert a grid cell to exact [lng,lat] instead of guessing the scale. When you MOVE equipment, " +
   "also update the matching endpoint of any cable in layers/cables.geojson connected to it, so " +
@@ -66,10 +69,13 @@ const SYSTEM_TEXT_ONLY =
   "from footprints, NOT a surveyed sidewalk), '='/'|'=street, '*'=central " +
   "office, lowercase letters=closures, digits/letters=buildings) plus a LEGEND mapping each id to " +
   "its grid cell (col,row), meters from the SW corner, address, nearest street (on=Sn), and " +
-  "relationships; and basemap.txt — the same area as an EMPTY canvas (geography only, no " +
-  "equipment/cables) for deciding where things CAN go. Read these files and answer (or edit) " +
-  "using ONLY them — they are the only data you have. Cite ids exactly (e.g. B-0-0, CL-1-2, " +
-  "CO-1); never invent ids.";
+  "relationships; textmap-v2.txt — the SAME design as TWO ALIGNED LAYERS (LAYER 1 geography, " +
+  "LAYER 2 network drawn unoccluded, one symbol per space-separated cell) — cross-reference " +
+  "layers at the same (col,row): an equipment marker over '#' in LAYER 1 sits INSIDE that " +
+  "building, a cable glyph over '#' crosses it; and basemap.txt — the same area as an EMPTY " +
+  "canvas (geography only, no equipment/cables) for deciding where things CAN go. Read these " +
+  "files and answer (or edit) using ONLY them — they are the only data you have. Cite ids " +
+  "exactly (e.g. B-0-0, CL-1-2, CO-1); never invent ids.";
 
 const SYSTEM_DATA_ONLY =
   "You are Jax, a spatial-analysis agent. The DataStore contains ONLY structured GeoJSON/JSON " +

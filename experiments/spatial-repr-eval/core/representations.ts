@@ -34,12 +34,15 @@ import {
 } from "./oracle";
 import { buildMapboxStaticUrl, sceneToMapGeometry } from "./map-url";
 import type { EquipmentKind, Scene } from "./scene";
-import { toTextMap } from "./textmap";
+import { toTextMap, toTextMapV2 } from "./textmap";
 
 export interface RepresentationBundle {
   json: string;
   ascii: string;
   textmap: string;
+  /** v2 grid (aligned layers, one token per cell) — same legend as textmap,
+   *  so the textmap vs textmap2 comparison isolates pure grid design. */
+  textmap2: string;
   wkt: string;
   verdict: string;
   image: { base64: string; mediaType: "image/png" } | null;
@@ -293,6 +296,7 @@ export async function buildRepresentations(scene: Scene): Promise<Representation
     json: toJSON(scene),
     ascii: toAscii(scene),
     textmap: toTextMap(scene),
+    textmap2: toTextMapV2(scene),
     wkt: toWKT(scene),
     verdict: toVerdict(scene),
     image,

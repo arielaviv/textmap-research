@@ -26,11 +26,12 @@ const FILE_ORDER = [
   "layers/cables.geojson",
   "basemap.txt",
   "textmap.txt",
+  "textmap-v2.txt",
 ];
 
 // "text-only" keeps the TEXTUAL maps (the canvas + the design) and drops the
 // structured JSON/geojson — so the agent must reason from the text, not coords.
-const TEXTUAL_FILES = ["basemap.txt", "textmap.txt"];
+const TEXTUAL_FILES = ["basemap.txt", "textmap.txt", "textmap-v2.txt"];
 
 interface ChatStep {
   tool: string;

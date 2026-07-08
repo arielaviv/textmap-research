@@ -34,7 +34,7 @@ import {
 export const dynamic = "force-dynamic";
 export const maxDuration = 800;
 
-const ALL_ARMS: ArmId[] = ["json", "ascii", "textmap", "wkt", "image", "verdict"];
+const ALL_ARMS: ArmId[] = ["json", "ascii", "textmap", "textmap2", "wkt", "image", "verdict"];
 const DEFAULT_MODELS = ["claude-sonnet-4-6"];
 // Hard guard against runaway sweeps. NOTE: a run near this cap takes hours — far
 // beyond Vercel's maxDuration — so big sweeps must target a local dev server

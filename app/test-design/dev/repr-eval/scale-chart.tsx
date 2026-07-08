@@ -30,6 +30,7 @@ const ARM_COLORS: Record<string, string> = {
   json: "#2a78d6",
   ascii: "#1baf7a",
   textmap: "#008300",
+  textmap2: "#eb6834",
   wkt: "#eda100",
   image: "#4a3aa7",
   verdict: "#e34948",

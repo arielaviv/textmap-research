@@ -15,8 +15,8 @@ import { ModelSelect } from "./model-select";
 import { ScaleChart, type ScalePoint } from "./scale-chart";
 import { WorkspaceTab } from "./workspace-tab";
 
-type Arm = "json" | "ascii" | "textmap" | "wkt" | "image" | "verdict";
-const ARMS: Arm[] = ["json", "ascii", "textmap", "wkt", "image", "verdict"];
+type Arm = "json" | "ascii" | "textmap" | "textmap2" | "wkt" | "image" | "verdict";
+const ARMS: Arm[] = ["json", "ascii", "textmap", "textmap2", "wkt", "image", "verdict"];
 
 interface PreviewResp {
   summary: { buildings: number; streets: number; equipment: number; cables: number };
@@ -24,6 +24,7 @@ interface PreviewResp {
     json: string;
     ascii: string;
     textmap: string;
+    textmap2: string;
     wkt: string;
     verdict: string;
     image: string | null;
@@ -923,6 +924,11 @@ export default function ReprEvalPage() {
             <RepBox
               title="E · Text map (LLM-optimized)"
               body={preview.representations.textmap}
+              mono
+            />
+            <RepBox
+              title="E2 · Text map v2 (aligned layers, one token per cell)"
+              body={preview.representations.textmap2}
               mono
             />
             <RepBox title="F · WKT table" body={preview.representations.wkt} mono />
