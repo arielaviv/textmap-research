@@ -374,3 +374,277 @@ export function toTextMap(scene: Scene, opts: { network?: boolean } = {}): strin
 
   return lines.join("\n");
 }
+
+// ---------------------------------------------------------------------------
+// textmap v2 — aligned layers, one token per cell, directional cables
+// ---------------------------------------------------------------------------
+
+/** Directional glyph for a cable segment in cell space (row grows southward). */
+function cableGlyph(dc: number, dr: number): string {
+  const adc = Math.abs(dc);
+  const adr = Math.abs(dr);
+  if (adc >= 2 * adr) return "-";
+  if (adr >= 2 * adc) return "|";
+  return dc * dr > 0 ? "\\" : "/";
+}
+
+export function toTextMapV2(scene: Scene): string {
+  const { minLng, minLat, maxLng, maxLat } = scene.bounds;
+  const widthM = Math.max(1, haversineMeters([minLng, minLat], [maxLng, minLat]));
+  const heightM = Math.max(1, haversineMeters([minLng, minLat], [minLng, maxLat]));
+
+  const gw = GRID_W;
+  const gh = Math.max(MIN_H, Math.min(MAX_H, Math.round((GRID_W * heightM) / widthM)));
+  const cellW = (maxLng - minLng) / gw || 1;
+  const cellH = (maxLat - minLat) / gh || 1;
+  const mpcX = widthM / gw;
+  const mpcY = heightM / gh;
+
+  const toFrac = (c: Coord): [number, number] => [
+    (c[0] - minLng) / cellW,
+    gh - (c[1] - minLat) / cellH,
+  ];
+  const toCell = (c: Coord): [number, number] => {
+    const [fx, fy] = toFrac(c);
+    return [
+      Math.max(0, Math.min(gw - 1, Math.floor(fx))),
+      Math.max(0, Math.min(gh - 1, Math.floor(fy))),
+    ];
+  };
+  const xM = (c: Coord): number => Math.round(haversineMeters([minLng, c[1]], [c[0], c[1]]));
+  const yM = (c: Coord): number => Math.round(haversineMeters([c[0], minLat], [c[0], c[1]]));
+
+  // Two ALIGNED grids sharing one frame. base = geography; net = network drawn
+  // on an empty field WITHOUT occlusion — the whole point of v2: nothing ever
+  // overwrites the evidence (P1 lossless-at-query-time).
+  const base: string[][] = Array.from({ length: gh }, () => Array(gw).fill("."));
+  const net: string[][] = Array.from({ length: gh }, () => Array(gw).fill("."));
+  const setBase = (col: number, row: number, ch: string, onlyEmpty = false): void => {
+    if (col < 0 || col >= gw || row < 0 || row >= gh) return;
+    if (onlyEmpty && base[row][col] !== ".") return;
+    base[row][col] = ch;
+  };
+  const setNet = (col: number, row: number, ch: string): void => {
+    if (col < 0 || col >= gw || row < 0 || row >= gh) return;
+    net[row][col] = ch;
+  };
+
+  // ── LAYER 1: streets ─────────────────────────────────────────────────────
+  for (const s of scene.streets) {
+    for (let i = 0; i < s.coordinates.length - 1; i++) {
+      const clip = clipSegment(s.coordinates[i], s.coordinates[i + 1], scene.bounds);
+      if (!clip) continue;
+      const [a, b] = clip;
+      const sym = Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1]) ? "=" : "|";
+      const [c0, r0] = toCell(a);
+      const [c1, r1] = toCell(b);
+      bresenham(c0, r0, c1, r1, (col, row) => setBase(col, row, sym, true));
+    }
+  }
+
+  // Named streets (same grouping + placeholder rule as v1).
+  interface NamedStreet {
+    id: string;
+    name: string;
+    polylines: Coord[][];
+    orientation: "E-W" | "N-S";
+  }
+  const byName = new Map<string, Coord[][]>();
+  for (const s of scene.streets) {
+    const nm = (s.name ?? "").trim();
+    if (!nm || /^street \d+$/i.test(nm) || s.coordinates.length < 2) continue;
+    const arr = byName.get(nm) ?? [];
+    arr.push(s.coordinates);
+    byName.set(nm, arr);
+  }
+  const namedStreets: NamedStreet[] = [];
+  let streetIdx = 0;
+  for (const [name, polylines] of byName) {
+    const pts = polylines.flat();
+    let mnL = Number.POSITIVE_INFINITY;
+    let mxL = Number.NEGATIVE_INFINITY;
+    let mnA = Number.POSITIVE_INFINITY;
+    let mxA = Number.NEGATIVE_INFINITY;
+    for (const [lng, lat] of pts) {
+      if (lng < mnL) mnL = lng;
+      if (lng > mxL) mxL = lng;
+      if (lat < mnA) mnA = lat;
+      if (lat > mxA) mxA = lat;
+    }
+    const midA = (mnA + mxA) / 2;
+    const wM = haversineMeters([mnL, midA], [mxL, midA]);
+    const hM = haversineMeters([mnL, mnA], [mnL, mxA]);
+    namedStreets.push({
+      id: `S${streetIdx++}`,
+      name,
+      polylines,
+      orientation: wM >= hM ? "E-W" : "N-S",
+    });
+  }
+  for (const ns of namedStreets) {
+    const longest = ns.polylines.reduce((a, b) => (b.length > a.length ? b : a), ns.polylines[0]);
+    const [c0, r] = toCell(longest[Math.floor(longest.length / 2)]);
+    const fits = [...ns.id].every((_, i) => {
+      const c = c0 + i;
+      return c < gw && (base[r][c] === "=" || base[r][c] === "|" || base[r][c] === ".");
+    });
+    if (fits) for (let i = 0; i < ns.id.length; i++) base[r][c0 + i] = ns.id[i];
+  }
+  const nearestNamedStreet = (pos: Coord): NamedStreet | null => {
+    let best: { d: number; s: NamedStreet } | null = null;
+    for (const s of namedStreets) {
+      for (const pl of s.polylines) {
+        const d = pointToPolylineMeters(pos, pl);
+        if (!best || d < best.d) best = { d, s };
+      }
+    }
+    return best?.s ?? null;
+  };
+
+  // ── LAYER 1: building footprints + labels + margins ──────────────────────
+  scene.buildings.forEach((b, bi) => {
+    const marker = BUILDING_LABELS[bi] ?? "?";
+    const ring = b.footprint.map(toFrac) as Coord[];
+    const xs = ring.map((p) => p[0]);
+    const ys = ring.map((p) => p[1]);
+    const minX = Math.max(0, Math.floor(Math.min(...xs)));
+    const maxX = Math.min(gw - 1, Math.ceil(Math.max(...xs)));
+    const minY = Math.max(0, Math.floor(Math.min(...ys)));
+    const maxY = Math.min(gh - 1, Math.ceil(Math.max(...ys)));
+    let filled = 0;
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        if (pointInPolygon([x + 0.5, y + 0.5], ring)) {
+          base[y][x] = "#";
+          filled++;
+        }
+      }
+    }
+    const [cc, cr] = toCell(b.centroid);
+    if (filled === 0) base[cr][cc] = "#";
+    base[cr][cc] = marker;
+  });
+  const bCells: [number, number][] = [];
+  for (let y = 0; y < gh; y++) {
+    for (let x = 0; x < gw; x++) if (base[y][x] === "#") bCells.push([x, y]);
+  }
+  for (const [bx, by] of bCells) {
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = bx + dx;
+        const ny = by + dy;
+        if (nx >= 0 && nx < gw && ny >= 0 && ny < gh && base[ny][nx] === ".") base[ny][nx] = ":";
+      }
+    }
+  }
+
+  // ── LAYER 2: cables (full path, unoccluded, directional glyphs) ──────────
+  for (const cab of scene.cables) {
+    for (let i = 0; i < cab.path.length - 1; i++) {
+      const clip = clipSegment(cab.path[i], cab.path[i + 1], scene.bounds);
+      if (!clip) continue;
+      const [c0, r0] = toCell(clip[0]);
+      const [c1, r1] = toCell(clip[1]);
+      const g = cableGlyph(c1 - c0, r1 - r0);
+      bresenham(c0, r0, c1, r1, (col, row) => setNet(col, row, g));
+    }
+  }
+
+  // ── LAYER 2: equipment (drawn last — never occluded by anything) ─────────
+  const equipMarker = new Map<string, string>();
+  let li = 0;
+  for (const e of scene.equipment) {
+    const marker = e.kind === "co" ? "*" : e.kind === "cabinet" ? "@" : (EQUIP_LETTERS[li++] ?? "?");
+    equipMarker.set(e.id, marker);
+    const [col, row] = toCell(e.position);
+    setNet(col, row, marker);
+  }
+
+  // ── Format: one token per cell (space-separated), self-locating rows ─────
+  const spacedGrid = (grid: string[][]): string[] => {
+    const tens = Array.from({ length: gw }, (_, c) => String(Math.floor(c / 10) % 10)).join(" ");
+    const ones = Array.from({ length: gw }, (_, c) => String(c % 10)).join(" ");
+    const out: string[] = [`     ${tens}`, `     ${ones}`];
+    for (let r = 0; r < gh; r++) out.push(`${pad2(r)} | ${grid[r].join(" ")} | ${pad2(r)}`);
+    return out;
+  };
+
+  const buildingById = new Map(scene.buildings.map((b) => [b.id, b]));
+  const lines: string[] = [];
+  lines.push(
+    `TEXT MAP v2 — two ALIGNED layers, one grid frame, north-up. 1 cell ≈ ${((mpcX + mpcY) / 2).toFixed(1)}m. ` +
+      `col 0..${gw - 1} = W→E, row 0..${gh - 1} = N→S (row 0 = north). Cells are space-separated (one symbol = one cell).`,
+  );
+  lines.push(
+    `GRID REF — cell(col,row) centre = [lng, lat]:  ` +
+      `lng = ${minLng.toFixed(7)} + (col+0.5)*${cellW.toExponential(4)};  ` +
+      `lat = ${maxLat.toFixed(7)} - (row+0.5)*${cellH.toExponential(4)}`,
+  );
+  lines.push(
+    "CROSS-REFERENCE: the layers share coordinates. Look up the SAME (col,row) in both layers: " +
+      "an equipment marker over '#' in LAYER 1 sits INSIDE that building; a cable glyph over '#' CROSSES it.",
+  );
+  lines.push("");
+  lines.push(
+    "LAYER 1/2 — GEOGRAPHY   (. open   : open margin beside a building (INFERRED from footprints — NOT a surveyed sidewalk)   # building   = | street   0-9/A-Z building labels)",
+  );
+  lines.push(...spacedGrid(base));
+  lines.push("");
+  lines.push(
+    "LAYER 2/2 — NETWORK   (* CO   @ cabinet   a-z closures   - | / \\ cable path; drawn UNOCCLUDED — the full position/path even where it overlaps geography)",
+  );
+  lines.push(...spacedGrid(net));
+
+  // ── Legend: identical content to v1 — the v1 vs v2 comparison isolates ───
+  // pure grid design.
+  lines.push("");
+  lines.push("LEGEND  (id · marker · cell(col,row) · meters(x,y from SW) · detail)");
+  for (const e of scene.equipment) {
+    const [col, row] = toCell(e.position);
+    const marker = equipMarker.get(e.id) ?? "?";
+    let detail: string;
+    if (e.kind === "co") {
+      detail = "source";
+    } else {
+      const serves = e.serves.length ? ` serves=${e.serves.join(",")}` : "";
+      const near = e.serves.map((id) => buildingById.get(id)).find((b) => b?.address);
+      const nearStr = near ? ` near "${addrStr(near)}"` : "";
+      const ns = nearestNamedStreet(e.position);
+      const onStr = ns ? ` on=${ns.id} "${ns.name}"` : "";
+      detail = `${e.kind}${serves}${onStr}${nearStr}`;
+    }
+    lines.push(
+      `  ${padRight(e.id, 8)} ${marker}  (${col},${row})  x=${xM(e.position)} y=${yM(e.position)}  ${detail}`,
+    );
+  }
+  scene.buildings.forEach((b, bi) => {
+    const [col, row] = toCell(b.centroid);
+    const marker = BUILDING_LABELS[bi] ?? "?";
+    const addr = b.address ? ` addr "${addrStr(b)}"` : "";
+    lines.push(
+      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}`,
+    );
+  });
+
+  if (namedStreets.length) {
+    lines.push("");
+    lines.push("STREETS  (id · orientation · name)");
+    for (const ns of namedStreets) {
+      lines.push(`  ${padRight(ns.id, 4)} ${padRight(ns.orientation, 4)} ${ns.name}`);
+    }
+  }
+
+  if (scene.cables.length) {
+    lines.push("");
+    lines.push("CABLES");
+    for (const c of scene.cables) {
+      const [a0, ar0] = toCell(c.path[0]);
+      const [a1, ar1] = toCell(c.path[c.path.length - 1]);
+      lines.push(
+        `  ${padRight(c.id, 14)} ${padRight(c.kind, 13)} ${c.sourceId} -> ${c.targetId}  (${a0},${ar0})->(${a1},${ar1})`,
+      );
+    }
+  }
+
+  return lines.join("\n");
+}
