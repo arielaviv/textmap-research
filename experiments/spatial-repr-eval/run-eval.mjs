@@ -38,6 +38,8 @@ const seed = Number(arg("seed", "1000"));
 const sourceMode = arg("source", "synthetic"); // "synthetic" | "real"
 const city = arg("city", "nyc");
 const isolate = arg("isolate", "false") === "true"; // representation-only arms (no JSON baseline)
+// Shared secret when the target server sets EVAL_SECRET (deployed instances).
+const secret = arg("secret", process.env.EVAL_SECRET ?? "");
 // Scale sweep: comma list of AOI sizes (real, meters) or blocks-per-side (synthetic).
 const scale = arg("scale", "")
   .split(",")
@@ -63,7 +65,7 @@ async function main() {
 
   const resp = await fetch(`${url}/api/experiments/repr-eval/run`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...(secret ? { "x-eval-secret": secret } : {}) },
     body: JSON.stringify({
       source: sourceMode,
       city,

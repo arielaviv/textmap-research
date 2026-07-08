@@ -74,12 +74,18 @@ export function WorkspaceTab({
   sceneBody,
   model,
   onModelChange,
+  evalSecret,
 }: {
   sceneBody: SceneBody;
   model: string;
   /** Lifted to the page — switching remounts the tab (transcript formats can't mix). */
   onModelChange: (id: string) => void;
+  /** x-eval-secret for deployed instances with EVAL_SECRET set; empty = open. */
+  evalSecret?: string;
 }) {
+  const secretHeaders: Record<string, string> = evalSecret
+    ? { "x-eval-secret": evalSecret }
+    : {};
   const [files, setFiles] = useState<Record<string, string> | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [selected, setSelected] = useState<string>("textmap.txt");
@@ -115,7 +121,7 @@ export function WorkspaceTab({
     try {
       const r = await fetch("/api/experiments/repr-eval/chat/seed", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...secretHeaders },
         body: JSON.stringify(sceneBody),
       });
       if (!r.ok) throw new Error(await r.text());
@@ -140,7 +146,7 @@ export function WorkspaceTab({
     try {
       const r = await fetch("/api/experiments/repr-eval/chat", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...secretHeaders },
         body: JSON.stringify({
           files: agentFiles,
           mode,

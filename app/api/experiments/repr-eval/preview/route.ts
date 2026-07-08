@@ -8,6 +8,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { checkEvalAuth } from "@/app/api/experiments/repr-eval/auth";
 import { fetchRealOSM } from "@/app/api/experiments/repr-eval/osm-fetch";
 import {
   cablesCrossingForeignBuildings,
@@ -46,6 +47,8 @@ interface PreviewBody {
 }
 
 export async function POST(req: Request) {
+  const denied = checkEvalAuth(req);
+  if (denied) return denied;
   let body: PreviewBody = {};
   try {
     body = (await req.json()) as PreviewBody;

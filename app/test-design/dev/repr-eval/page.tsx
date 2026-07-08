@@ -9,7 +9,7 @@
  * is for inspection and demos.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BENCHMARK_MODELS, MODELS } from "@/experiments/spatial-repr-eval/core/models";
 import { ModelSelect } from "./model-select";
 import { ScaleChart, type ScalePoint } from "./scale-chart";
@@ -199,6 +199,15 @@ export default function ReprEvalPage() {
   const [run, setRun] = useState<RunResp | null>(null);
   const [loading, setLoading] = useState<"" | "preview" | "run">("");
   const [err, setErr] = useState<string | null>(null);
+  // Shared secret for deployed instances (EVAL_SECRET env on the server). Empty
+  // when the server runs open (local dev).
+  const [evalSecret, setEvalSecret] = useState("");
+  useEffect(() => {
+    setEvalSecret(localStorage.getItem("evalSecret") ?? "");
+  }, []);
+  const secretHeaders: Record<string, string> = evalSecret
+    ? { "x-eval-secret": evalSecret }
+    : {};
 
   const plant = {
     closureInBuilding: plantInBuilding || undefined,
@@ -255,7 +264,7 @@ export default function ReprEvalPage() {
     try {
       const r = await fetch("/api/experiments/repr-eval/preview", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...secretHeaders },
         body: JSON.stringify(previewBody),
       });
       if (!r.ok) throw new Error(await r.text());
@@ -273,7 +282,7 @@ export default function ReprEvalPage() {
     try {
       const r = await fetch("/api/experiments/repr-eval/run", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...secretHeaders },
         body: JSON.stringify(runBody),
       });
       if (!r.ok) throw new Error(await r.text());
@@ -398,6 +407,22 @@ export default function ReprEvalPage() {
           <span className="text-zinc-600">model</span>
           <ModelSelect value={model} onChange={setModel} />
         </label>
+        <label
+          className="flex flex-col"
+          title="Only needed against a deployed instance with EVAL_SECRET set — leave empty for local dev."
+        >
+          <span className="text-zinc-600">secret</span>
+          <input
+            type="password"
+            value={evalSecret}
+            onChange={(e) => {
+              setEvalSecret(e.target.value);
+              localStorage.setItem("evalSecret", e.target.value);
+            }}
+            placeholder="(open server)"
+            className="w-24 rounded border border-zinc-300 bg-white px-2 py-1"
+          />
+        </label>
       </div>
 
       {/* Top-level tabs */}
@@ -417,7 +442,13 @@ export default function ReprEvalPage() {
       {/* key={model} remounts on model switch → clears chat/transcript so the
           Anthropic-block vs OpenAI-message transcript formats never mix. */}
       {topTab === "workspace" && (
-        <WorkspaceTab key={model} sceneBody={seedBody} model={model} onModelChange={setModel} />
+        <WorkspaceTab
+          key={model}
+          sceneBody={seedBody}
+          model={model}
+          onModelChange={setModel}
+          evalSecret={evalSecret}
+        />
       )}
 
       {topTab === "eval" && (

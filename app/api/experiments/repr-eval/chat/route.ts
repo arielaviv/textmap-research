@@ -12,6 +12,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
+import { checkEvalAuth } from "@/app/api/experiments/repr-eval/auth";
 import { renderImageFromFiles } from "@/app/api/experiments/repr-eval/render-image";
 import {
   applyEdit,
@@ -310,6 +311,8 @@ async function runGatewayLoop(
 }
 
 export async function POST(req: Request) {
+  const denied = checkEvalAuth(req);
+  if (denied) return denied;
   const t0 = Date.now(); // whole-turn wall clock, consistent with whole-turn tokens
   let body: ChatBody;
   try {

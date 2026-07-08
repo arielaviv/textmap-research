@@ -8,6 +8,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { checkEvalAuth } from "@/app/api/experiments/repr-eval/auth";
 import { fetchRealOSM } from "@/app/api/experiments/repr-eval/osm-fetch";
 import { renderImageFromFiles } from "@/app/api/experiments/repr-eval/render-image";
 import { sceneToFiles } from "@/experiments/spatial-repr-eval/core/datastore";
@@ -33,6 +34,8 @@ interface SeedBody {
 }
 
 export async function POST(req: Request) {
+  const denied = checkEvalAuth(req);
+  if (denied) return denied;
   let body: SeedBody = {};
   try {
     body = (await req.json()) as SeedBody;

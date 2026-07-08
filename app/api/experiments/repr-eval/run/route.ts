@@ -9,6 +9,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { checkEvalAuth } from "@/app/api/experiments/repr-eval/auth";
 import { fetchRealOSM } from "@/app/api/experiments/repr-eval/osm-fetch";
 import {
   type ArmId,
@@ -72,6 +73,8 @@ const ROTATE: Plant[] = [
 ];
 
 export async function POST(req: Request) {
+  const denied = checkEvalAuth(req);
+  if (denied) return denied;
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return NextResponse.json({ error: "ANTHROPIC_API_KEY not set" }, { status: 500 });
 
