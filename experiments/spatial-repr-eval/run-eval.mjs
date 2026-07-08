@@ -59,7 +59,18 @@ async function main() {
   const resp = await fetch(`${url}/api/experiments/repr-eval/run`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ source: sourceMode, city, n, models, arms, repeats, temperature, seed, isolate }),
+    body: JSON.stringify({
+      source: sourceMode,
+      city,
+      n,
+      models,
+      arms,
+      repeats,
+      temperature,
+      seed,
+      isolate,
+      includePrompts: true,
+    }),
   });
   if (!resp.ok) {
     console.error(`Request failed: ${resp.status} ${await resp.text()}`);
@@ -142,6 +153,23 @@ async function main() {
   const mdPath = join(outDir, "report.md");
   writeFileSync(mdPath, lines.join("\n"), "utf8");
 
+  // --- runlog.jsonl — the full record of every run: config, each composed prompt
+  // (once per scene×arm), each question text, and every item incl. the raw
+  // structured answer. Items cite prompts by `${sceneId}|${arm}` key.
+  const log = [];
+  log.push(JSON.stringify({ type: "config", ...data.config }));
+  for (const [k, text] of Object.entries(data.prompts ?? {})) {
+    log.push(JSON.stringify({ type: "prompt", key: k, text }));
+  }
+  for (const [k, text] of Object.entries(data.questions ?? {})) {
+    log.push(JSON.stringify({ type: "question", key: k, text }));
+  }
+  for (const item of items) {
+    log.push(JSON.stringify({ type: "item", ...item }));
+  }
+  const jsonlPath = join(outDir, "runlog.jsonl");
+  writeFileSync(jsonlPath, `${log.join("\n")}\n`, "utf8");
+
   // --- console summary ---
   console.log("Accuracy by arm:");
   for (const a of aggregate.perArm) {
@@ -151,6 +179,7 @@ async function main() {
   }
   console.log(`\nWrote ${csvPath}`);
   console.log(`Wrote ${mdPath}`);
+  console.log(`Wrote ${jsonlPath}`);
 }
 
 main().catch((e) => {

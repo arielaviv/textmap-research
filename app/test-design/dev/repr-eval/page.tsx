@@ -30,10 +30,21 @@ interface PreviewResp {
   truths: Record<string, unknown>;
 }
 interface RunItem {
+  sceneId?: string;
+  model?: string;
   arm: Arm;
   questionId: string;
   category: string;
+  repeat?: number;
   correct: boolean;
+  inputTokens?: number;
+  outputTokens?: number;
+  latencyMs?: number;
+  hallucinated?: boolean;
+  hallucinatedIds?: string[];
+  missingInfo?: string | null;
+  rawAnswer?: Record<string, unknown> | null;
+  scaleM?: number | null;
   error?: string;
 }
 interface ArmSummary {
@@ -79,6 +90,60 @@ interface RunResp {
   config?: { n?: number; totalCalls?: number };
   aggregate: Aggregate;
   perModel?: ModelAgg[];
+  prompts?: Record<string, string>;
+  questions?: Record<string, string>;
+}
+
+/** Client-side file download — no server round-trip. */
+function downloadBlob(filename: string, text: string, mime: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+const csvField = (v: unknown): string => {
+  const s = v == null ? "" : String(v);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+function runToCsv(run: RunResp): string {
+  const header =
+    "sceneId,model,arm,questionId,category,repeat,correct,inputTokens,outputTokens,latencyMs,hallucinated,hallucinatedIds,missingInfo,scaleM,error";
+  const rows = run.items.map((r) =>
+    [
+      r.sceneId ?? "",
+      r.model ?? "",
+      r.arm,
+      r.questionId,
+      r.category,
+      r.repeat ?? "",
+      r.correct,
+      r.inputTokens ?? "",
+      r.outputTokens ?? "",
+      r.latencyMs ?? "",
+      r.hallucinated ?? "",
+      (r.hallucinatedIds ?? []).join("|"),
+      csvField(r.missingInfo ?? ""),
+      r.scaleM ?? "",
+      csvField(r.error ?? ""),
+    ].join(","),
+  );
+  return [header, ...rows].join("\n");
+}
+
+function runToJsonl(run: RunResp): string {
+  const lines: string[] = [JSON.stringify({ type: "config", ...(run.config ?? {}) })];
+  for (const [key, text] of Object.entries(run.prompts ?? {})) {
+    lines.push(JSON.stringify({ type: "prompt", key, text }));
+  }
+  for (const [key, text] of Object.entries(run.questions ?? {})) {
+    lines.push(JSON.stringify({ type: "question", key, text }));
+  }
+  for (const item of run.items) lines.push(JSON.stringify({ type: "item", ...item }));
+  return `${lines.join("\n")}\n`;
 }
 
 const CATEGORIES = [
@@ -118,6 +183,7 @@ export default function ReprEvalPage() {
   const [city, setCity] = useState("nyc");
   const [scenes, setScenes] = useState(20);
   const [isolate, setIsolate] = useState(true);
+  const [includePrompts, setIncludePrompts] = useState(false);
   const [onlyCat, setOnlyCat] = useState(""); // "" = all questions; else a category or question id
   // Benchmark sweep runs across many models; `model` (Anthropic-only) still drives the workspace.
   const [evalModels, setEvalModels] = useState<string[]>(BENCHMARK_MODELS);
@@ -155,6 +221,7 @@ export default function ReprEvalPage() {
           temperature: 0,
           isolate,
           questionIds,
+          includePrompts,
         }
       : {
           source,
@@ -165,6 +232,7 @@ export default function ReprEvalPage() {
           temperature: 0,
           isolate,
           questionIds,
+          includePrompts,
         };
 
   async function loadPreview() {
@@ -383,6 +451,17 @@ export default function ReprEvalPage() {
             </label>
             <label
               className="flex items-center gap-1.5 text-sm"
+              title="Ship the composed prompt of every scene × arm with the response so the JSONL download is a complete run record (large at high n)."
+            >
+              <input
+                type="checkbox"
+                checked={includePrompts}
+                onChange={(e) => setIncludePrompts(e.target.checked)}
+              />
+              include prompts
+            </label>
+            <label
+              className="flex items-center gap-1.5 text-sm"
               title="Run only one category or question to save tokens and isolate a result."
             >
               only:
@@ -463,6 +542,31 @@ export default function ReprEvalPage() {
                 agg.perArmCategory.find((r) => r.arm === arm && r.category === category);
               return (
                 <div className="mb-4 space-y-3">
+                  {/* Full-run exports — the paper's artifact trail */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => downloadBlob("results.csv", runToCsv(run), "text/csv")}
+                      className="rounded border border-zinc-300 bg-white px-2.5 py-1 text-xs hover:bg-zinc-100"
+                    >
+                      download CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        downloadBlob("runlog.jsonl", runToJsonl(run), "application/jsonl")
+                      }
+                      className="rounded border border-zinc-300 bg-white px-2.5 py-1 text-xs hover:bg-zinc-100"
+                    >
+                      download run log (JSONL)
+                    </button>
+                    {!run.prompts && (
+                      <span className="text-[11px] text-zinc-400">
+                        tip: check "include prompts" before running for a complete JSONL record
+                      </span>
+                    )}
+                  </div>
+
                   {/* Benchmark matrix: model × arm accuracy (blank = image arm skipped, no vision) */}
                   {perModel.length > 1 && (
                     <div className="overflow-x-auto rounded-lg border border-zinc-300 bg-white p-3">
