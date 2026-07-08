@@ -29,7 +29,7 @@ import { aggregate, aggregateByModel } from "@/experiments/spatial-repr-eval/cor
 export const dynamic = "force-dynamic";
 export const maxDuration = 800;
 
-const ALL_ARMS: ArmId[] = ["json", "ascii", "textmap", "image", "verdict"];
+const ALL_ARMS: ArmId[] = ["json", "ascii", "textmap", "wkt", "image", "verdict"];
 const DEFAULT_MODELS = ["claude-sonnet-4-6"];
 const MAX_CALLS = 4000;
 

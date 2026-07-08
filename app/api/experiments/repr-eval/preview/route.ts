@@ -124,6 +124,7 @@ export async function POST(req: Request) {
       json: reps.json,
       ascii: reps.ascii,
       textmap: reps.textmap,
+      wkt: reps.wkt,
       verdict: reps.verdict,
       image: reps.image ? `data:image/png;base64,${reps.image.base64}` : null,
       imageNote: reps.imageNote ?? null,

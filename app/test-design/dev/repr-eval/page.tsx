@@ -13,8 +13,8 @@ import { useState } from "react";
 import { BENCHMARK_MODELS, MODELS } from "@/experiments/spatial-repr-eval/core/models";
 import { WorkspaceTab } from "./workspace-tab";
 
-type Arm = "json" | "ascii" | "textmap" | "image" | "verdict";
-const ARMS: Arm[] = ["json", "ascii", "textmap", "image", "verdict"];
+type Arm = "json" | "ascii" | "textmap" | "wkt" | "image" | "verdict";
+const ARMS: Arm[] = ["json", "ascii", "textmap", "wkt", "image", "verdict"];
 
 interface PreviewResp {
   summary: { buildings: number; streets: number; equipment: number; cables: number };
@@ -22,6 +22,7 @@ interface PreviewResp {
     json: string;
     ascii: string;
     textmap: string;
+    wkt: string;
     verdict: string;
     image: string | null;
     imageNote: string | null;
@@ -689,6 +690,7 @@ export default function ReprEvalPage() {
               body={preview.representations.textmap}
               mono
             />
+            <RepBox title="F · WKT table" body={preview.representations.wkt} mono />
             <RepBox title="D · Verdict ledger" body={preview.representations.verdict} />
             <div className="rounded-lg border border-zinc-300 bg-white p-3">
               <div className="mb-2 text-sm font-medium">C · Map image</div>

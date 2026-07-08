@@ -10,7 +10,7 @@ import { QUESTIONS } from "./questions";
 import { buildRepresentations, type RepresentationBundle } from "./representations";
 import type { Scene } from "./scene";
 
-export type ArmId = "json" | "ascii" | "textmap" | "image" | "verdict";
+export type ArmId = "json" | "ascii" | "textmap" | "wkt" | "image" | "verdict";
 
 export interface EvalConfig {
   apiKey: string;
@@ -65,6 +65,8 @@ function compose(
       return {
         text: isolate ? bundle.textmap : `${bundle.json}\n\n=== TEXT MAP ===\n${bundle.textmap}`,
       };
+    case "wkt":
+      return { text: isolate ? bundle.wkt : `${bundle.json}\n\n=== WKT ===\n${bundle.wkt}` };
     case "verdict":
       return { text: isolate ? bundle.verdict : `${bundle.json}\n\n${bundle.verdict}` };
     case "image":

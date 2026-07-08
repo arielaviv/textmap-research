@@ -39,6 +39,7 @@ export interface RepresentationBundle {
   json: string;
   ascii: string;
   textmap: string;
+  wkt: string;
   verdict: string;
   image: { base64: string; mediaType: "image/png" } | null;
   imageNote?: string;
@@ -183,6 +184,49 @@ export function toAscii(scene: Scene): string {
 }
 
 // ---------------------------------------------------------------------------
+// F. WKT — well-known-text geometry table
+// ---------------------------------------------------------------------------
+
+// WKT carries geometry only, so attributes ride in a TSV column alongside it —
+// the standard "WKT column in a CSV" GIS interchange shape. Same information
+// content as the JSON arm, different encoding.
+export function toWKT(scene: Scene): string {
+  const fmt = (c: [number, number]): string => `${c[0].toFixed(7)} ${c[1].toFixed(7)}`;
+  const line = (coords: [number, number][]): string => coords.map(fmt).join(", ");
+  const ring = (footprint: [number, number][]): string => {
+    const [first] = footprint;
+    const last = footprint[footprint.length - 1];
+    const closed =
+      first && last && (first[0] !== last[0] || first[1] !== last[1])
+        ? [...footprint, first]
+        : footprint;
+    return line(closed);
+  };
+
+  const rows: string[] = ["id\ttype\tattrs\twkt"];
+  for (const b of scene.buildings) {
+    const addr = b.address ? `;addr=${b.address.number} ${b.address.street}` : "";
+    rows.push(
+      `${b.id}\tbuilding\tuse=${b.type};floors=${b.floors}${addr}\tPOLYGON((${ring(b.footprint)}))`,
+    );
+  }
+  for (const s of scene.streets) {
+    rows.push(`${s.id}\tstreet\tname=${s.name}\tLINESTRING(${line(s.coordinates)})`);
+  }
+  for (const e of scene.equipment) {
+    rows.push(
+      `${e.id}\tequipment\tkind=${e.kind};serves=[${e.serves.join(",")}]\tPOINT(${fmt(e.position)})`,
+    );
+  }
+  for (const c of scene.cables) {
+    rows.push(
+      `${c.id}\tcable\tkind=${c.kind};source=${c.sourceId};target=${c.targetId}\tLINESTRING(${line(c.path)})`,
+    );
+  }
+  return rows.join("\n");
+}
+
+// ---------------------------------------------------------------------------
 // D. Verdict — computed spatial-predicate ledger
 // ---------------------------------------------------------------------------
 
@@ -248,6 +292,7 @@ export async function buildRepresentations(scene: Scene): Promise<Representation
     json: toJSON(scene),
     ascii: toAscii(scene),
     textmap: toTextMap(scene),
+    wkt: toWKT(scene),
     verdict: toVerdict(scene),
     image,
     imageNote: image
