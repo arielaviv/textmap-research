@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import { BENCHMARK_MODELS, MODELS } from "@/experiments/spatial-repr-eval/core/models";
+import { ModelSelect } from "./model-select";
 import { ScaleChart, type ScalePoint } from "./scale-chart";
 import { WorkspaceTab } from "./workspace-tab";
 
@@ -395,24 +396,7 @@ export default function ReprEvalPage() {
         </label>
         <label className="flex flex-col">
           <span className="text-zinc-600">model</span>
-          <select
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="rounded border border-zinc-300 bg-white px-2 py-1"
-          >
-            <optgroup label="Anthropic">
-              <option value="claude-sonnet-4-6">sonnet-4-6</option>
-              <option value="claude-opus-4-8">opus-4-8</option>
-              <option value="claude-haiku-4-5-20251001">haiku-4-5</option>
-            </optgroup>
-            <optgroup label="Gateway (needs AI_GATEWAY_API_KEY)">
-              <option value="openai/gpt-4o">openai/gpt-4o</option>
-              <option value="openai/gpt-4o-mini">openai/gpt-4o-mini</option>
-              <option value="google/gemini-2.5-flash">google/gemini-2.5-flash</option>
-              <option value="moonshotai/kimi-k2">moonshotai/kimi-k2</option>
-              <option value="deepseek/deepseek-chat">deepseek/deepseek-chat</option>
-            </optgroup>
-          </select>
+          <ModelSelect value={model} onChange={setModel} />
         </label>
       </div>
 
@@ -432,7 +416,9 @@ export default function ReprEvalPage() {
 
       {/* key={model} remounts on model switch → clears chat/transcript so the
           Anthropic-block vs OpenAI-message transcript formats never mix. */}
-      {topTab === "workspace" && <WorkspaceTab key={model} sceneBody={seedBody} model={model} />}
+      {topTab === "workspace" && (
+        <WorkspaceTab key={model} sceneBody={seedBody} model={model} onModelChange={setModel} />
+      )}
 
       {topTab === "eval" && (
         <>

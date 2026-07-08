@@ -310,6 +310,7 @@ async function runGatewayLoop(
 }
 
 export async function POST(req: Request) {
+  const t0 = Date.now(); // whole-turn wall clock, consistent with whole-turn tokens
   let body: ChatBody;
   try {
     body = (await req.json()) as ChatBody;
@@ -342,7 +343,11 @@ export async function POST(req: Request) {
         image,
         mutated: g.mutated,
         messages: g.messages,
-        usage: { inputTokens: g.inputTokens, outputTokens: g.outputTokens },
+        usage: {
+          inputTokens: g.inputTokens,
+          outputTokens: g.outputTokens,
+          latencyMs: Date.now() - t0,
+        },
       });
     } catch (err) {
       return NextResponse.json(
@@ -426,6 +431,6 @@ export async function POST(req: Request) {
     image,
     mutated,
     messages,
-    usage: { inputTokens, outputTokens },
+    usage: { inputTokens, outputTokens, latencyMs: Date.now() - t0 },
   });
 }

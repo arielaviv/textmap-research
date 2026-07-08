@@ -13,6 +13,7 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
+import { ModelSelect } from "./model-select";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -40,7 +41,9 @@ interface ChatMsg {
   role: "user" | "assistant";
   content: string;
   steps?: ChatStep[];
-  usage?: { inputTokens: number; outputTokens: number };
+  /** Which model produced this reply — recorded at send time. */
+  model?: string;
+  usage?: { inputTokens: number; outputTokens: number; latencyMs?: number };
 }
 function stepLabel(s: ChatStep): string {
   const o = (s.input ?? {}) as Record<string, unknown>;
@@ -67,7 +70,16 @@ interface SceneBody {
   spec?: Record<string, unknown>;
 }
 
-export function WorkspaceTab({ sceneBody, model }: { sceneBody: SceneBody; model: string }) {
+export function WorkspaceTab({
+  sceneBody,
+  model,
+  onModelChange,
+}: {
+  sceneBody: SceneBody;
+  model: string;
+  /** Lifted to the page — switching remounts the tab (transcript formats can't mix). */
+  onModelChange: (id: string) => void;
+}) {
   const [files, setFiles] = useState<Record<string, string> | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [selected, setSelected] = useState<string>("textmap.txt");
@@ -143,7 +155,7 @@ export function WorkspaceTab({ sceneBody, model }: { sceneBody: SceneBody; model
         files?: Record<string, string>;
         image?: string | null;
         messages?: unknown[];
-        usage?: { inputTokens: number; outputTokens: number };
+        usage?: { inputTokens: number; outputTokens: number; latencyMs?: number };
       };
       // Carry the full transcript forward so the agent remembers prior tool calls.
       setTranscript(data.messages ?? [...nextTranscript, { role: "assistant", content: data.reply }]);
@@ -161,7 +173,7 @@ export function WorkspaceTab({ sceneBody, model }: { sceneBody: SceneBody; model
       }
       setMsgs((cur) => [
         ...cur,
-        { role: "assistant", content: data.reply, steps: data.steps, usage: data.usage },
+        { role: "assistant", content: data.reply, steps: data.steps, model, usage: data.usage },
       ]);
     } catch (e) {
       setMsgs((cur) => [
@@ -319,35 +331,48 @@ export function WorkspaceTab({ sceneBody, model }: { sceneBody: SceneBody; model
                 {m.content}
               </div>
               {m.usage && (
-                <div className="mt-0.5 font-mono text-[10px] text-zinc-400" title="Whole-turn tokens (system prompt + transcript + files). Illustrative — the eval's single-shot per-arm counts are the clean per-representation measure.">
+                <div
+                  className="mt-0.5 font-mono text-[10px] text-zinc-400"
+                  title="Whole-turn tokens and wall-clock (system prompt + transcript + files). Illustrative — the eval's single-shot per-arm counts are the clean per-representation measure."
+                >
+                  {m.model && <span className="text-zinc-500">{m.model} · </span>}
                   {m.usage.inputTokens.toLocaleString()} in · {m.usage.outputTokens.toLocaleString()}{" "}
                   out tokens
+                  {m.usage.latencyMs != null && ` · ${(m.usage.latencyMs / 1000).toFixed(1)}s`}
                 </div>
               )}
             </div>
           ))}
           {busy && <div className="text-xs text-zinc-500">Jax is working…</div>}
         </div>
-        <div className="flex gap-2 border-zinc-200 border-t p-2">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") send();
-            }}
-            disabled={!files}
-            aria-label="Ask the datastore agent"
-            placeholder={files ? "Ask or instruct…" : "Load a scene first"}
-            className="flex-1 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-50"
-          />
-          <button
-            type="button"
-            onClick={send}
-            disabled={busy || !files}
-            className="rounded bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
-          >
-            Send
-          </button>
+        <div className="space-y-1.5 border-zinc-200 border-t p-2">
+          {/* Prominent model selector — switch vendors mid-experiment to compare
+              (cheap vs frontier). Switching clears the chat (transcript formats). */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-600">model</span>
+            <ModelSelect value={model} onChange={onModelChange} size="lg" className="flex-1" />
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") send();
+              }}
+              disabled={!files}
+              aria-label="Ask the datastore agent"
+              placeholder={files ? "Ask or instruct…" : "Load a scene first"}
+              className="flex-1 rounded border border-zinc-300 bg-white px-2 py-1.5 text-sm disabled:opacity-50"
+            />
+            <button
+              type="button"
+              onClick={send}
+              disabled={busy || !files}
+              className="rounded bg-emerald-600 px-3 py-1.5 text-sm text-white hover:bg-emerald-500 disabled:opacity-50"
+            >
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </div>
