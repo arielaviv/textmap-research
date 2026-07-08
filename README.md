@@ -42,6 +42,7 @@ pnpm dev                     # http://localhost:3000
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Mapbox token for building static map image URLs (image representation). |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_ENDPOINT_URL` / `AWS_REGION` / `LAKEHOUSE_BUCKET` | *(optional)* Cloudflare R2 (S3-compatible) credentials for reading the pre-indexed OSM city extracts from Nexma's bucket. Use the same values Nexma uses. When unset, real-OSM scenes fall back to synthetic. |
 | `OSM_DATA_BASE_URL` | *(optional)* Alternative to the R2 creds: a base URL serving the same `osm/buildings/{city}.json` + `osm/streets/{city}.json` files over HTTP. |
+| `EVAL_SECRET` | *(optional)* Shared secret gating the model-calling routes (`run`/`preview`/`chat`/`chat/seed`). Unset = open (local dev). When set, callers must send the same value in an `x-eval-secret` header — the page has a `secret` field (persisted to localStorage) and `run-eval.mjs` takes `--secret`. Set this on any public deployment or anyone can spend the API keys. |
 
 ## OSM data
 
@@ -50,8 +51,9 @@ The real-scene routes load pre-indexed OpenStreetMap building/street extracts
 `lib/datastore/r2-upload.ts`, which resolves in this order:
 
 1. **A slice bundled in the repo** at `data/osm/...` — the default, self-contained
-   path. A midtown-Manhattan slice for `new-york` is committed (~3 MB), which covers
-   the area the `nyc` eval samples (center `-73.984,40.7549`, ~350 m boxes).
+   path. A ~4.6×5.1 km Manhattan slice for `new-york` is committed (~10 MB,
+   16k buildings), covering the `nyc` eval's seed jitter (±1 km around
+   `-73.984,40.7549`) at every scale-sweep level up to 2800 m boxes.
 2. **Cloudflare R2** when `AWS_*` + `LAKEHOUSE_BUCKET` are set — the same bucket
    Nexma uses, for full-city scale tests.
 3. **`OSM_DATA_BASE_URL`** over HTTP, if set.
@@ -73,6 +75,30 @@ It writes `data/osm/buildings/{city}.json` + `data/osm/streets/{city}.json` in t
 exact format the services expect. Commit the result to bundle it. For a true
 full-city scale test, set the R2 credentials instead and let it read Nexma's extract.
 `new-york` and `tel-aviv` have preset bboxes; pass `--bbox` for anything else.
+
+## Running the experiment
+
+The interactive page at `/test-design/dev/repr-eval` drives single runs (Workspace
+demo + Eval proof, with CSV/JSONL downloads). For the full protocol — ~20 real maps,
+6 representation arms, 10 oracle-graded questions across 8 categories, 3 repeats,
+and the ×1/×2/×4/×8 scale sweep — use the batch driver against a local dev server
+(big sweeps exceed serverless time limits):
+
+```bash
+pnpm dev   # in one terminal, with the API keys in .env.local
+node experiments/spatial-repr-eval/run-eval.mjs \
+  --url http://localhost:3000 --source real --city nyc \
+  --n 20 --repeats 3 --isolate true --seed 1000 \
+  --models claude-haiku-4-5-20251001,claude-sonnet-4-6,claude-opus-4-8,openai/gpt-4o,google/gemini-2.5-flash \
+  --arms json,wkt,textmap,image \
+  --scale 350,700,1400,2800
+```
+
+It writes `results.csv` (per-item: correctness, tokens in/out, latency, hallucinated
+ids, missing-info), `report.md` (Wilson CIs, per-category, per-scale, McNemar), and
+`runlog.jsonl` (every composed prompt + raw structured answer — the full run record).
+Estimate the call count first: it's printed before the request, and the server refuses
+runs over its cap.
 
 ## Tests
 
