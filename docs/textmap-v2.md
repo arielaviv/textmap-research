@@ -87,6 +87,16 @@ tests threshold-guessing rather than spatial reading.
 `d_street=`); json likely still fails it (must derive 9 point-to-polyline
 distances from raw coordinates one-shot).
 
+**Run 4 (2 calls, targeted):** still wrong — textmap2 answered the three
+closures whose CELLS are street cells; the oracle wanted all eight at ≤3m.
+Deeper defect: the synthetic generator places every closure at exactly 3.0m
+offset, so the ≤3m oracle made the entire roster "in road" by boundary
+equality — the question degenerated into float-threshold trivia. Fix:
+`IN_ROAD_M` 3→2 (prompt auto-syncs via `ORACLE_CONSTANTS`), so "in road" means
+the genuinely misplaced closure (the planted one at 0.0m). Applies to every arm
+equally. **Prediction (pre-run 5):** textmap2 answers exactly the d_street=0.0
+closure; json must find it from raw coordinates and likely fails.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

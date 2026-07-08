@@ -19,7 +19,10 @@ import type { Coord, Scene } from "./scene";
 
 const ON_STREET_SNAP_M = 8; // within 8m of a street centerline counts as "on street"
 const COVERAGE_RADIUS_M = 35; // a building is "covered" if a closure is within 35m
-const IN_ROAD_M = 3; // within 3m of a street centerline = sitting IN the carriageway (misplaced)
+// Within 2m of a centerline = sitting IN the carriageway (misplaced). 2, not 3:
+// the synthetic generator places every closure at exactly 3.0m offset, so a ≤3
+// threshold made the whole roster "in road" by boundary equality — degenerate.
+const IN_ROAD_M = 2;
 
 /** Equipment ids whose point falls inside a building footprint (an error). */
 export function closuresInsideBuildings(scene: Scene): string[] {
