@@ -76,6 +76,11 @@ export interface ArmSummary extends Proportion {
   arm: string;
   avgInputTokens: number;
   avgOutputTokens: number;
+  avgLatencyMs: number;
+  /** Share of items citing at least one nonexistent entity id (errors count as clean). */
+  hallucinationRate: number;
+  /** Share of items where the model reported missing information. */
+  missingInfoRate: number;
 }
 export interface ArmCategorySummary extends Proportion {
   arm: string;
@@ -121,11 +126,15 @@ export function aggregate(items: ItemResult[]): Aggregate {
     const correct = rows.filter((r) => r.correct).length;
     const inTok = rows.reduce((s, r) => s + r.inputTokens, 0);
     const outTok = rows.reduce((s, r) => s + r.outputTokens, 0);
+    const lat = rows.reduce((s, r) => s + r.latencyMs, 0);
     return {
       arm,
       ...wilson(correct, rows.length),
       avgInputTokens: rows.length ? Math.round(inTok / rows.length) : 0,
       avgOutputTokens: rows.length ? Math.round(outTok / rows.length) : 0,
+      avgLatencyMs: rows.length ? Math.round(lat / rows.length) : 0,
+      hallucinationRate: rows.length ? rows.filter((r) => r.hallucinated).length / rows.length : 0,
+      missingInfoRate: rows.length ? rows.filter((r) => r.missingInfo).length / rows.length : 0,
     };
   });
 

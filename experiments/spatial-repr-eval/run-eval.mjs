@@ -70,8 +70,14 @@ async function main() {
   if (data.config?.totalCalls) console.log(`  server ran ${data.config.totalCalls} calls\n`);
 
   // --- results.csv ---
+  // RFC-4180 escaping: quote any field containing commas/quotes/newlines
+  // (missingInfo and error are free text from the model/provider).
+  const csv = (v) => {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
   const header =
-    "sceneId,model,arm,questionId,category,repeat,correct,inputTokens,outputTokens,error";
+    "sceneId,model,arm,questionId,category,repeat,correct,inputTokens,outputTokens,latencyMs,hallucinated,hallucinatedIds,missingInfo,scaleM,error";
   const rows = items.map((r) =>
     [
       r.sceneId,
@@ -83,7 +89,12 @@ async function main() {
       r.correct,
       r.inputTokens,
       r.outputTokens,
-      JSON.stringify(r.error ?? ""),
+      r.latencyMs ?? "",
+      r.hallucinated ?? "",
+      (r.hallucinatedIds ?? []).join("|"),
+      csv(r.missingInfo ?? ""),
+      r.scaleM ?? "",
+      csv(r.error ?? ""),
     ].join(","),
   );
   const csvPath = join(outDir, "results.csv");
@@ -97,11 +108,13 @@ async function main() {
   lines.push(`Total items: ${aggregate.totalItems} (errors: ${aggregate.errors})\n`);
 
   lines.push("\n## Accuracy by arm (95% Wilson CI)\n");
-  lines.push("| Arm | Accuracy | 95% CI | n | avg in-tok | avg out-tok |");
-  lines.push("|-----|----------|--------|---|-----------|------------|");
+  lines.push(
+    "| Arm | Accuracy | 95% CI | n | avg in-tok | avg out-tok | avg latency | halluc. | missing-info |",
+  );
+  lines.push("|-----|----------|--------|---|-----------|------------|--------|---------|--------------|");
   for (const a of aggregate.perArm) {
     lines.push(
-      `| ${a.arm} | ${pct(a.acc)} | [${pct(a.lo)}, ${pct(a.hi)}] | ${a.n} | ${a.avgInputTokens} | ${a.avgOutputTokens} |`,
+      `| ${a.arm} | ${pct(a.acc)} | [${pct(a.lo)}, ${pct(a.hi)}] | ${a.n} | ${a.avgInputTokens} | ${a.avgOutputTokens} | ${((a.avgLatencyMs ?? 0) / 1000).toFixed(1)}s | ${pct(a.hallucinationRate ?? 0)} | ${pct(a.missingInfoRate ?? 0)} |`,
     );
   }
 

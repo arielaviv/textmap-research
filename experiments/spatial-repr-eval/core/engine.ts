@@ -4,9 +4,10 @@
  * so both produce identical, comparable results.
  */
 
+import { askedMissingInfo, hallucinatedIds } from "./metrics";
 import { askModel } from "./model";
 import { isVisionModel } from "./models";
-import { QUESTIONS } from "./questions";
+import { type Answer, QUESTIONS } from "./questions";
 import { buildRepresentations, type RepresentationBundle } from "./representations";
 import type { Scene } from "./scene";
 
@@ -46,6 +47,17 @@ export interface ItemResult {
   correct: boolean;
   inputTokens: number;
   outputTokens: number;
+  /** Wall-clock provider-call time, ms. */
+  latencyMs: number;
+  /** The answer cited at least one entity id that does not exist in the scene. */
+  hallucinated: boolean;
+  hallucinatedIds: string[];
+  /** The model reported information as missing (non-empty missingInfo field). */
+  missingInfo: string | null;
+  /** The raw structured answer, kept for the run log. */
+  rawAnswer: Answer | null;
+  /** AOI size (m) for scale sweeps; null outside a sweep. */
+  scaleM: number | null;
   error?: string;
 }
 
@@ -143,6 +155,7 @@ export async function runEval(
       question: q.prompt(t.scene),
     });
     const correct = res.answer ? q.grade(t.scene, res.answer) : false;
+    const badIds = res.answer ? hallucinatedIds(t.scene, res.answer) : [];
     results.push({
       sceneId: t.scene.id,
       model: t.model,
@@ -153,6 +166,13 @@ export async function runEval(
       correct,
       inputTokens: res.inputTokens,
       outputTokens: res.outputTokens,
+      latencyMs: res.latencyMs,
+      hallucinated: badIds.length > 0,
+      hallucinatedIds: badIds,
+      missingInfo:
+        res.answer && askedMissingInfo(res.answer) ? (res.answer.missingInfo ?? null) : null,
+      rawAnswer: res.answer,
+      scaleM: t.scene.sizeM ?? null,
       error: res.error,
     });
     done++;

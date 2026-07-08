@@ -22,6 +22,8 @@ export interface AskResult {
   answer: Answer | null;
   inputTokens: number;
   outputTokens: number;
+  /** Wall-clock time of the provider call (including network), ms. */
+  latencyMs: number;
   error?: string;
 }
 
@@ -29,7 +31,9 @@ const SYSTEM =
   "You are a precise spatial-analysis assistant for GIS / FTTH network data. " +
   "You are given a representation of a small map (buildings, streets, equipment, cables) and ONE question. " +
   "Reason carefully about the spatial relationships, then call submit_answer with ONLY the requested field(s). " +
-  "Ids must match exactly the ids present in the data. Do not invent ids.";
+  "Ids must match exactly the ids present in the data. Do not invent ids. " +
+  "If (and only if) the representation truly lacks the information needed to answer, also fill " +
+  "`missingInfo` with a brief note of what is missing.";
 
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 
@@ -55,6 +59,7 @@ async function askAnthropic(input: AskInput): Promise<AskResult> {
   }
   content.push({ type: "text", text: `QUESTION:\n${input.question}` });
 
+  const t0 = Date.now();
   try {
     const resp = await client.messages.create({
       model: input.model,
@@ -79,12 +84,18 @@ async function askAnthropic(input: AskInput): Promise<AskResult> {
         break;
       }
     }
-    return { answer, inputTokens: resp.usage.input_tokens, outputTokens: resp.usage.output_tokens };
+    return {
+      answer,
+      inputTokens: resp.usage.input_tokens,
+      outputTokens: resp.usage.output_tokens,
+      latencyMs: Date.now() - t0,
+    };
   } catch (err) {
     return {
       answer: null,
       inputTokens: 0,
       outputTokens: 0,
+      latencyMs: Date.now() - t0,
       error: err instanceof Error ? err.message : String(err),
     };
   }
@@ -102,6 +113,7 @@ async function askGateway(input: AskInput): Promise<AskResult> {
       answer: null,
       inputTokens: 0,
       outputTokens: 0,
+      latencyMs: 0,
       error: "AI_GATEWAY_API_KEY not set — add it (with billing) in Vercel to run gateway models.",
     };
   }
@@ -118,6 +130,7 @@ async function askGateway(input: AskInput): Promise<AskResult> {
   }
   userContent.push({ type: "text", text: `QUESTION:\n${input.question}` });
 
+  const t0 = Date.now();
   try {
     const res = await fetch(GATEWAY_URL, {
       method: "POST",
@@ -150,6 +163,7 @@ async function askGateway(input: AskInput): Promise<AskResult> {
         answer: null,
         inputTokens: 0,
         outputTokens: 0,
+        latencyMs: Date.now() - t0,
         error: `gateway ${input.model} ${res.status}: ${txt.slice(0, 200)}`,
       };
     }
@@ -167,12 +181,14 @@ async function askGateway(input: AskInput): Promise<AskResult> {
       answer,
       inputTokens: data.usage?.prompt_tokens ?? 0,
       outputTokens: data.usage?.completion_tokens ?? 0,
+      latencyMs: Date.now() - t0,
     };
   } catch (err) {
     return {
       answer: null,
       inputTokens: 0,
       outputTokens: 0,
+      latencyMs: Date.now() - t0,
       error: err instanceof Error ? err.message : String(err),
     };
   }

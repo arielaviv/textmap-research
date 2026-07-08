@@ -45,6 +45,9 @@ interface ArmSummary {
   hi: number;
   avgInputTokens: number;
   avgOutputTokens: number;
+  avgLatencyMs: number;
+  hallucinationRate: number;
+  missingInfoRate: number;
 }
 interface ArmCategorySummary {
   arm: string;
@@ -476,6 +479,7 @@ export default function ReprEvalPage() {
                               </th>
                             ))}
                             <th className="px-3">tok in</th>
+                            <th className="px-3">latency</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -485,6 +489,10 @@ export default function ReprEvalPage() {
                                   mm.perArm.reduce((s, a) => s + a.avgInputTokens, 0) /
                                     mm.perArm.length,
                                 )
+                              : 0;
+                            const meanLat = mm.perArm.length
+                              ? mm.perArm.reduce((s, a) => s + (a.avgLatencyMs ?? 0), 0) /
+                                mm.perArm.length
                               : 0;
                             return (
                               <tr key={mm.model} className="border-zinc-200 border-t">
@@ -502,6 +510,9 @@ export default function ReprEvalPage() {
                                   );
                                 })}
                                 <td className="px-3 py-1 text-center text-zinc-500">{meanIn}</td>
+                                <td className="px-3 py-1 text-center text-zinc-500">
+                                  {(meanLat / 1000).toFixed(1)}s
+                                </td>
                               </tr>
                             );
                           })}
@@ -548,6 +559,9 @@ export default function ReprEvalPage() {
                           <th className="px-3">95% CI</th>
                           <th className="px-3">n</th>
                           <th className="px-3">tok in/out</th>
+                          <th className="px-3">latency</th>
+                          <th className="px-3">halluc.</th>
+                          <th className="px-3">missing</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -561,6 +575,17 @@ export default function ReprEvalPage() {
                             <td className="px-3 py-1 text-center text-zinc-600">{a.n}</td>
                             <td className="px-3 py-1 text-center text-zinc-500">
                               {a.avgInputTokens}/{a.avgOutputTokens}
+                            </td>
+                            <td className="px-3 py-1 text-center text-zinc-500">
+                              {((a.avgLatencyMs ?? 0) / 1000).toFixed(1)}s
+                            </td>
+                            <td
+                              className={`px-3 py-1 text-center ${(a.hallucinationRate ?? 0) > 0 ? "text-red-600" : "text-zinc-500"}`}
+                            >
+                              {pct(a.hallucinationRate ?? 0)}
+                            </td>
+                            <td className="px-3 py-1 text-center text-zinc-500">
+                              {pct(a.missingInfoRate ?? 0)}
                             </td>
                           </tr>
                         ))}

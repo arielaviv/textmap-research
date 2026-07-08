@@ -45,6 +45,9 @@ export interface Answer {
   closureId?: string;
   onStreet?: boolean;
   equipmentPath?: string[];
+  /** The model's report that the representation lacks needed information. The
+   *  forced tool call means it can't literally ask — this field records the ask. */
+  missingInfo?: string;
 }
 
 /** JSON schema for the forced `submit_answer` tool. */
@@ -57,6 +60,12 @@ export const ANSWER_TOOL_SCHEMA = {
     closureId: { type: "string", description: "an id, or 'none'" },
     onStreet: { type: "boolean" },
     equipmentPath: { type: "array", items: { type: "string" } },
+    missingInfo: {
+      type: "string",
+      description:
+        "ONLY if the provided map representation truly lacks the information needed to answer, " +
+        "briefly state what is missing. Otherwise omit this field.",
+    },
   },
   additionalProperties: false,
 } as const;

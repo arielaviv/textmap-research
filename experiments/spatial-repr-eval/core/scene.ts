@@ -75,6 +75,8 @@ export interface Scene {
   cables: SceneCable[];
   /** Present only for synthetic scenes. */
   grid?: { cols: number; rows: number; metersPerCell: number; origin: Coord };
+  /** AOI size (m) when the scene belongs to a scale sweep; set by the run route. */
+  sizeM?: number;
   /** What was deliberately planted — for test assertions only, NOT shown to the model. */
   planted: {
     closuresInBuilding: string[]; // equipment ids
