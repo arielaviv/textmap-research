@@ -84,14 +84,32 @@ demo + Eval proof, with CSV/JSONL downloads). For the full protocol — ~20 real
 and the ×1/×2/×4/×8 scale sweep — use the batch driver against a local dev server
 (big sweeps exceed serverless time limits):
 
+Run it as TWO passes (a combined pass would exceed the server's 20k-call cap; they
+are separate figures anyway):
+
 ```bash
 pnpm dev   # in one terminal, with the API keys in .env.local
+
+# Smoke first — a few dozen calls, verifies the whole pipeline end-to-end:
+node experiments/spatial-repr-eval/run-eval.mjs --smoke \
+  --models claude-haiku-4-5-20251001 --arms json,textmap,wkt --isolate true
+
+# Pass 1 — main protocol (~12,000 calls): 20 maps × 10 questions × 3 repeats
 node experiments/spatial-repr-eval/run-eval.mjs \
   --url http://localhost:3000 --source real --city nyc \
   --n 20 --repeats 3 --isolate true --seed 1000 \
   --models claude-haiku-4-5-20251001,claude-sonnet-4-6,claude-opus-4-8,openai/gpt-4o,google/gemini-2.5-flash \
   --arms json,wkt,textmap,image \
-  --scale 350,700,1400,2800
+  --out results/main
+
+# Pass 2 — scale sweep (~4,800 calls): 5 centers × 4 sizes, 2 models
+node experiments/spatial-repr-eval/run-eval.mjs \
+  --url http://localhost:3000 --source real --city nyc \
+  --n 5 --repeats 2 --isolate true --seed 1000 \
+  --models claude-haiku-4-5-20251001,claude-sonnet-4-6 \
+  --arms json,wkt,textmap,image \
+  --scale 350,700,1400,2800 \
+  --out results/scale
 ```
 
 It writes `results.csv` (per-item: correctness, tokens in/out, latency, hallucinated
