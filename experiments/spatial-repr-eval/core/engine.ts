@@ -107,16 +107,38 @@ async function runPool<T>(
   await Promise.all(runners);
 }
 
+export interface RunOutput {
+  items: ItemResult[];
+  /** `${sceneId}|${arm}` → the composed representation text that arm presented
+   *  (image arm: the text part only; the PNG itself is not retained). */
+  prompts: Record<string, string>;
+  /** `${sceneId}|${questionId}` → the rendered question prompt. */
+  questions: Record<string, string>;
+}
+
 export async function runEval(
   config: EvalConfig,
   onProgress?: (done: number, total: number) => void,
-): Promise<ItemResult[]> {
+): Promise<RunOutput> {
   const activeQuestions = selectQuestions(config.questionIds);
   const scenes = new Map<string, Scene>();
   const bundles = new Map<string, RepresentationBundle>();
   for (const scene of config.scenes) {
     scenes.set(scene.id, scene);
     bundles.set(scene.id, await buildRepresentations(scene));
+  }
+
+  // Prompts are per (scene, arm) — record each once so the run log can cite them
+  // without repeating a 50-80KB representation on every item.
+  const prompts: Record<string, string> = {};
+  const questionTexts: Record<string, string> = {};
+  for (const scene of scenes.values()) {
+    for (const arm of config.arms) {
+      prompts[`${scene.id}|${arm}`] = compose(arm, bundles.get(scene.id)!, config.isolate).text;
+    }
+    for (const q of activeQuestions) {
+      questionTexts[`${scene.id}|${q.id}`] = q.prompt(scene);
+    }
   }
 
   interface Task {
@@ -179,5 +201,5 @@ export async function runEval(
     onProgress?.(done, tasks.length);
   });
 
-  return results;
+  return { items: results, prompts, questions: questionTexts };
 }

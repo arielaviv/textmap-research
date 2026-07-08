@@ -31,7 +31,10 @@ export const maxDuration = 800;
 
 const ALL_ARMS: ArmId[] = ["json", "ascii", "textmap", "wkt", "image", "verdict"];
 const DEFAULT_MODELS = ["claude-sonnet-4-6"];
-const MAX_CALLS = 4000;
+// Hard guard against runaway sweeps. NOTE: a run near this cap takes hours — far
+// beyond Vercel's maxDuration — so big sweeps must target a local dev server
+// (run-eval.mjs --url http://localhost:3000), optionally with higher concurrency.
+const MAX_CALLS = 20000;
 
 type Plant = {
   closureInBuilding?: boolean;
@@ -52,6 +55,9 @@ interface RunBody {
   spec?: SyntheticSpec; // explicit single synthetic scene (page)
   isolate?: boolean; // drop the JSON baseline — representation-only arms
   questionIds?: string[]; // restrict to specific questions/categories (id or category)
+  scale?: number[]; // scale sweep: real = AOI sizes in meters; synthetic = blocks per side
+  concurrency?: number; // parallel model calls, clamped [1,16]
+  includePrompts?: boolean; // attach the (large) prompt/question maps to the response
 }
 
 const ROTATE: Plant[] = [
@@ -76,7 +82,8 @@ export async function POST(req: Request) {
   const models = body.models?.length ? body.models : DEFAULT_MODELS;
   const arms = body.arms?.length ? body.arms : ALL_ARMS;
   const temperature = body.temperature ?? 0;
-  const repeats = Math.max(1, Math.min(body.repeats ?? 1, 5));
+  const repeats = Math.max(1, Math.min(body.repeats ?? 1, 10));
+  const concurrency = Math.max(1, Math.min(body.concurrency ?? 6, 16));
   const seed = body.seed ?? 1000;
   const n =
     source === "real"
@@ -113,11 +120,11 @@ export async function POST(req: Request) {
     scenes,
     temperature,
     repeats,
-    concurrency: 6,
+    concurrency,
     isolate,
     questionIds: body.questionIds,
   };
-  const items = await runEval(config);
+  const { items, prompts, questions } = await runEval(config);
   return NextResponse.json({
     config: {
       source,
@@ -135,6 +142,9 @@ export async function POST(req: Request) {
     aggregate: aggregate(items),
     perModel: aggregateByModel(items),
     items,
+    // The prompt/question maps are large (a real-scene json arm is 50-80KB), so
+    // they ship only when the caller asks — the batch driver's run log does.
+    ...(body.includePrompts ? { prompts, questions } : {}),
   });
 }
 
