@@ -95,7 +95,9 @@ export async function POST(req: Request) {
   const n =
     source === "real"
       ? Math.max(1, Math.min(body.n ?? 1, 30))
-      : Math.max(1, Math.min(body.n ?? 5, 80));
+      : body.spec
+        ? 1 // an explicit spec builds exactly one scene
+        : Math.max(1, Math.min(body.n ?? 5, 80));
 
   const scaleLevels = body.scale?.filter((s) => Number.isFinite(s) && s > 0) ?? [];
   const activeQuestionCount = selectQuestions(body.questionIds).length;

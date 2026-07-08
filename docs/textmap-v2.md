@@ -40,6 +40,28 @@ over `#` in LAYER 1 sits INSIDE that building; a cable glyph over `#` crosses it
 - **Cost:** v2 grid ≈ 4× v1's grid tokens (2 layers × spacing) — still well
   below the json arm at every scale level.
 
+## v2.1 amendment — materialized joins (logged before its first run)
+
+Motivated by the first 40-call probe (July 8): single-shot forced answers leave
+no room to *execute* the cross-layer procedure — Haiku performed the lookup
+correctly in interactive chat but not one-shot. v2.1 therefore:
+
+- adds `under=` to every equipment legend row — the LAYER 1 surface at the
+  entity's own cell (`#(B-x)` / `=` / `|` / `:` / `.`), computed at render time
+  from the same two layers (a materialized join, entity-local, question-agnostic);
+- adds a HOW-TO-READ header line with a *hypothetical* worked example (never
+  computed from the scene — that would leak an answer).
+
+This places v2.1 explicitly on the **precomputation dial**:
+`json → grid+legend (v2) → +materialized joins (v2.1) → predicates (verdict)`.
+Entity-local facts go in; global scans (e.g. enumerating cable crossings) stay
+out — that is the verdict arm's side of the line.
+
+**Prediction (pre-run):** containment flips to correct for textmap2 in
+single-shot mode; `onstreet` may improve (`under==`). Known risk: `under=` is
+cell-quantized (~7m at 350m scale) while the oracle uses exact geometry — edge
+cases can disagree; quantization error is reported honestly, not hidden.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

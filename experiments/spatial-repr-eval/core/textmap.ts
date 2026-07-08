@@ -419,10 +419,19 @@ export function toTextMapV2(scene: Scene): string {
   // overwrites the evidence (P1 lossless-at-query-time).
   const base: string[][] = Array.from({ length: gh }, () => Array(gw).fill("."));
   const net: string[][] = Array.from({ length: gh }, () => Array(gw).fill("."));
+  // Semantic surface per cell (ignores cosmetic labels/stamps) + which building
+  // owns each '#' — feeds the legend's materialized `under=` join (v2.1).
+  const surface: string[][] = Array.from({ length: gh }, () => Array(gw).fill("."));
+  const owner: (string | null)[][] = Array.from({ length: gh }, () => Array(gw).fill(null));
   const setBase = (col: number, row: number, ch: string, onlyEmpty = false): void => {
     if (col < 0 || col >= gw || row < 0 || row >= gh) return;
     if (onlyEmpty && base[row][col] !== ".") return;
     base[row][col] = ch;
+  };
+  const setSurface = (col: number, row: number, ch: string, onlyEmpty = false): void => {
+    if (col < 0 || col >= gw || row < 0 || row >= gh) return;
+    if (onlyEmpty && surface[row][col] !== ".") return;
+    surface[row][col] = ch;
   };
   const setNet = (col: number, row: number, ch: string): void => {
     if (col < 0 || col >= gw || row < 0 || row >= gh) return;
@@ -438,7 +447,10 @@ export function toTextMapV2(scene: Scene): string {
       const sym = Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1]) ? "=" : "|";
       const [c0, r0] = toCell(a);
       const [c1, r1] = toCell(b);
-      bresenham(c0, r0, c1, r1, (col, row) => setBase(col, row, sym, true));
+      bresenham(c0, r0, c1, r1, (col, row) => {
+        setBase(col, row, sym, true);
+        setSurface(col, row, sym, true);
+      });
     }
   }
 
@@ -516,12 +528,18 @@ export function toTextMapV2(scene: Scene): string {
       for (let x = minX; x <= maxX; x++) {
         if (pointInPolygon([x + 0.5, y + 0.5], ring)) {
           base[y][x] = "#";
+          surface[y][x] = "#";
+          owner[y][x] = b.id;
           filled++;
         }
       }
     }
     const [cc, cr] = toCell(b.centroid);
-    if (filled === 0) base[cr][cc] = "#";
+    if (filled === 0) {
+      base[cr][cc] = "#";
+      surface[cr][cc] = "#";
+      owner[cr][cc] = b.id;
+    }
     base[cr][cc] = marker;
   });
   const bCells: [number, number][] = [];
@@ -533,7 +551,10 @@ export function toTextMapV2(scene: Scene): string {
       for (let dx = -1; dx <= 1; dx++) {
         const nx = bx + dx;
         const ny = by + dy;
-        if (nx >= 0 && nx < gw && ny >= 0 && ny < gh && base[ny][nx] === ".") base[ny][nx] = ":";
+        if (nx >= 0 && nx < gw && ny >= 0 && ny < gh && base[ny][nx] === ".") {
+          base[ny][nx] = ":";
+          setSurface(nx, ny, ":", true);
+        }
       }
     }
   }
@@ -584,6 +605,12 @@ export function toTextMapV2(scene: Scene): string {
     "CROSS-REFERENCE: the layers share coordinates. Look up the SAME (col,row) in both layers: " +
       "an equipment marker over '#' in LAYER 1 sits INSIDE that building; a cable glyph over '#' CROSSES it.",
   );
+  lines.push(
+    "HOW TO READ (hypothetical example, NOT from this scene): if LAYER 2 shows marker 'q' at " +
+      "(3,1) and LAYER 1 at (3,1) shows '#', that equipment sits INSIDE that building; '=' or '|' " +
+      "there means it sits on a street; ':' or '.' means open ground. The LEGEND's under= field " +
+      "precomputes this lookup for every equipment item.",
+  );
   lines.push("");
   lines.push(
     "LAYER 1/2 — GEOGRAPHY   (. open   : open margin beside a building (INFERRED from footprints — NOT a surveyed sidewalk)   # building   = | street   0-9/A-Z building labels)",
@@ -598,10 +625,16 @@ export function toTextMapV2(scene: Scene): string {
   // ── Legend: identical content to v1 — the v1 vs v2 comparison isolates ───
   // pure grid design.
   lines.push("");
-  lines.push("LEGEND  (id · marker · cell(col,row) · meters(x,y from SW) · detail)");
+  lines.push(
+    "LEGEND  (id · marker · cell(col,row) · meters(x,y from SW) · detail; " +
+      "under= is the LAYER 1 surface at the entity's own cell — '#(B-x)' = inside that " +
+      "building's footprint, '='/'|' = on a street, ':' = building margin, '.' = open ground)",
+  );
   for (const e of scene.equipment) {
     const [col, row] = toCell(e.position);
     const marker = equipMarker.get(e.id) ?? "?";
+    const s = surface[row][col];
+    const under = s === "#" ? `#(${owner[row][col] ?? "?"})` : s;
     let detail: string;
     if (e.kind === "co") {
       detail = "source";
@@ -614,7 +647,7 @@ export function toTextMapV2(scene: Scene): string {
       detail = `${e.kind}${serves}${onStr}${nearStr}`;
     }
     lines.push(
-      `  ${padRight(e.id, 8)} ${marker}  (${col},${row})  x=${xM(e.position)} y=${yM(e.position)}  ${detail}`,
+      `  ${padRight(e.id, 8)} ${marker}  (${col},${row})  x=${xM(e.position)} y=${yM(e.position)}  ${detail} under=${under}`,
     );
   }
   scene.buildings.forEach((b, bi) => {
