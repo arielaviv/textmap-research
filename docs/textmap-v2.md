@@ -172,8 +172,17 @@ on-street — the categorical label out-competed the d_street measurement.
 - Statistics fix: repeats at temperature 0 are correlated, so significance now
   comes from 60 DISTINCT maps × 1 repeat (real-scene n cap raised 30→60).
 
-**Prediction (pre-run, 60-map haiku, v2.3):** on-street recovers to ≥80% for
-textmap2; overall textmap2 ≥ +6 points over json with McNemar p < 0.05 on
+**Probe (8 scenes, on-street only):** the THRESHOLDS rule alone FAILED (3/8) —
+the categorical `under=:` label kept out-competing the d_street number. Fix:
+**labels lost their vote** — `under=` replaced by `inside=B-x|none` (building
+containment only, its one real job); street-ness is now conveyed ONLY by the
+d_street measurement. Re-probe: on-street 7/8, containment 7/8,
+road_misplacement 6/8. Design principle recorded: **when a categorical label
+and a measurement describe the same fact, the label wins the model's attention
+— so a legend should carry each fact exactly once, as a measurement.**
+
+**Prediction (pre-run, 60-map haiku, v2.3 frozen):** on-street recovers to
+≥80%; overall textmap2 ≥ +6 points over json with McNemar p < 0.05 on
 uncorrelated items; crossing stays weak (~10–20%) pending a structural idea.
 
 ## Integrity boundary
