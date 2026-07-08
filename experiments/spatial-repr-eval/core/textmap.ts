@@ -644,7 +644,7 @@ export function toTextMapV2(scene: Scene, opts: { protocol?: boolean } = {}): st
     "LEGEND  (id · marker · cell(col,row) · meters(x,y from SW) · detail; " +
       "inside= names the building whose footprint contains the entity's EXACT position " +
       "(none = outside every footprint); d_street= is the exact distance in meters to the " +
-      "nearest street centerline)",
+      "nearest street centerline; buildings carry d_closure= — exact distance to the nearest closure)",
   );
   for (const e of scene.equipment) {
     const [col, row] = toCell(e.position);
@@ -680,8 +680,18 @@ export function toTextMapV2(scene: Scene, opts: { protocol?: boolean } = {}): st
     const [col, row] = toCell(b.centroid);
     const marker = BUILDING_LABELS[bi] ?? "?";
     const addr = b.address ? ` addr "${addrStr(b)}"` : "";
+    // d_closure= completes the measurement symmetry: every entity carries its
+    // exact distances to what matters (streets for equipment, serving
+    // infrastructure for buildings). Distance only — never the id.
+    let dClosure = Number.POSITIVE_INFINITY;
+    for (const e of scene.equipment) {
+      if (e.kind !== "closure") continue;
+      const d = haversineMeters(b.centroid, e.position);
+      if (d < dClosure) dClosure = d;
+    }
+    const dc = Number.isFinite(dClosure) ? ` d_closure=${dClosure.toFixed(1)}m` : "";
     lines.push(
-      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}`,
+      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}${dc}`,
     );
   });
 

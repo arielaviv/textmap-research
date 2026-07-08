@@ -220,6 +220,25 @@ into noise.**
   alternative representation with token economics on real maps.
 - Budget: ~$27 of the $50 cap spent; ~$22 left in the account as reserve.
 
+## v2.5 — the last height iteration (July 9 morning), then freeze
+
+Added `d_closure=` per building (exact distance to nearest closure — distance
+only, never the id; completes measurement symmetry). Probe: nearest 12/12;
+coverage UNCHANGED (3/12). Diagnosis from raw answers: every d_closure in the
+legend was under 35m (7.6–20.1m), oracle = "none" — and haiku still named the
+LARGEST-distance buildings. The information is trivially present; the model
+cannot answer "empty set" (affirmation bias on existence questions). Controls:
+sonnet coverage 60% (no such bias), verdict ceiling 90%. **Finding #6:
+representation engineering ends where answer calibration begins — information
+access and answer bias are separable failure modes, and our harness separates
+them.** Validation (20 maps): v2.5 50.0% overall, no regression, nearest 100%.
+
+**FROZEN at v2.5.** Remaining iterations are breadth, not height: hold-out
+question set (the overfitting objection), second city (morphology
+generalization), gateway vendors. Certified paper numbers remain the v2.4
+60-map run; v2.5 differs only by the additive d_closure field (validated
+regression-free).
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
