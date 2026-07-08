@@ -185,13 +185,18 @@ export function nearestClosureOffStreet(scene: Scene, buildingId: string): strin
   return best?.id ?? null;
 }
 
-/** Buildings in the interior of the cluster — centroid NOT on the convex hull. */
+/** Buildings in the interior of the cluster — centroid NOT on the convex hull
+ *  BOUNDARY. Vertex membership alone is wrong on gridded scenes: monotone-chain
+ *  hulls drop collinear boundary points, mislabeling visually-perimeter
+ *  buildings (e.g. edge midpoints of a regular grid) as interior. */
 export function interiorBuildings(scene: Scene): string[] {
   if (scene.buildings.length < 4) return [];
   const hull = convexHull(scene.buildings.map((b) => b.centroid));
-  const onHull = new Set(hull.map((p) => `${p[0]},${p[1]}`));
+  if (hull.length < 3) return [];
+  const ring = [...hull, hull[0]];
+  const ON_BOUNDARY_M = 1;
   return scene.buildings
-    .filter((b) => !onHull.has(`${b.centroid[0]},${b.centroid[1]}`))
+    .filter((b) => pointToPolylineMeters(b.centroid, ring) > ON_BOUNDARY_M)
     .map((b) => b.id);
 }
 

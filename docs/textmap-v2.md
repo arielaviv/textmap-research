@@ -97,6 +97,19 @@ the genuinely misplaced closure (the planted one at 0.0m). Applies to every arm
 equally. **Prediction (pre-run 5):** textmap2 answers exactly the d_street=0.0
 closure; json must find it from raw coordinates and likely fails.
 
+**Run 5 (20 calls):** textmap2 **8/10** vs json 4/10 — road_misplacement
+flipped as predicted. Remaining failures (blockage, enclosure) fail on BOTH
+arms. Sonnet spot-check (4 calls): sonnet+textmap2 solves blockage where
+sonnet+json does not (the model-tier × representation interaction, H4);
+enclosure still fails everywhere — and inspection shows BOTH models answer the
+geometrically-correct `B-1-1` while the oracle listed 5 buildings: on a regular
+grid the edge-midpoint centroids are COLLINEAR with the corners, and
+monotone-chain hulls drop collinear points, so the oracle mislabeled
+visually-perimeter buildings as interior. Oracle fixed: perimeter = centroid on
+the hull BOUNDARY (≤1m), not hull-vertex membership. Selftest 9/9 after fix.
+**Prediction (pre-run 6):** enclosure flips for BOTH arms (their answers were
+already correct).
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
