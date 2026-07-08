@@ -627,14 +627,25 @@ export function toTextMapV2(scene: Scene): string {
   lines.push("");
   lines.push(
     "LEGEND  (id · marker · cell(col,row) · meters(x,y from SW) · detail; " +
-      "under= is the LAYER 1 surface at the entity's own cell — '#(B-x)' = inside that " +
-      "building's footprint, '='/'|' = on a street, ':' = building margin, '.' = open ground)",
+      "under= is the surface at the entity's EXACT position — '#(B-x)' = inside that " +
+      "building's footprint, '='/'|' = on a street, ':' = building margin, '.' = open ground; " +
+      "d_street= is the exact distance to the nearest street centerline)",
   );
   for (const e of scene.equipment) {
     const [col, row] = toCell(e.position);
     const marker = equipMarker.get(e.id) ?? "?";
+    // Exact geometry, not the raster: cell quantization mislabels entities that
+    // hug a wall (~cell-sized error), and the legend's on= already sets the
+    // exact-geometry precedent. The raster char is only the non-building fallback.
+    const inBuilding = scene.buildings.find((b) => pointInPolygon(e.position, b.footprint));
     const s = surface[row][col];
-    const under = s === "#" ? `#(${owner[row][col] ?? "?"})` : s;
+    const under = inBuilding ? `#(${inBuilding.id})` : s === "#" ? ":" : s;
+    let dStreet = Number.POSITIVE_INFINITY;
+    for (const st of scene.streets) {
+      const d = pointToPolylineMeters(e.position, st.coordinates);
+      if (d < dStreet) dStreet = d;
+    }
+    const dStreetStr = Number.isFinite(dStreet) ? ` d_street=${dStreet.toFixed(1)}m` : "";
     let detail: string;
     if (e.kind === "co") {
       detail = "source";
@@ -647,7 +658,7 @@ export function toTextMapV2(scene: Scene): string {
       detail = `${e.kind}${serves}${onStr}${nearStr}`;
     }
     lines.push(
-      `  ${padRight(e.id, 8)} ${marker}  (${col},${row})  x=${xM(e.position)} y=${yM(e.position)}  ${detail} under=${under}`,
+      `  ${padRight(e.id, 8)} ${marker}  (${col},${row})  x=${xM(e.position)} y=${yM(e.position)}  ${detail} under=${under}${dStreetStr}`,
     );
   }
   scene.buildings.forEach((b, bi) => {

@@ -62,6 +62,19 @@ single-shot mode; `onstreet` may improve (`under==`). Known risk: `under=` is
 cell-quantized (~7m at 350m scale) while the oracle uses exact geometry — edge
 cases can disagree; quantization error is reported honestly, not hidden.
 
+**Iteration log (July 8, run 2, 20 calls):** the quantization risk fired — the
+raster-derived `under=` produced 3/9 false positives (closures hugging a wall
+land in cells whose centers fall inside the footprint); the model followed the
+legend faithfully and was graded wrong. Fix: `under=` is now computed from
+EXACT geometry (pointInPolygon on the true position), consistent with the
+legend's existing exact-geometry `on=` field; the raster char remains only as
+the non-building fallback. Also added `d_street=` (exact distance to nearest
+street centerline) — a raw *measurement*, not a judgment; the boundary to the
+verdict arm is measurements-vs-predicates plus entity-local-vs-global-scan.
+**Prediction (pre-run 3):** containment, onstreet, and road_misplacement flip
+for textmap2; blockage/enclosure remain grid-procedural and likely still fail
+one-shot on haiku.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
