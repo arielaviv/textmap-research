@@ -628,23 +628,29 @@ export function toTextMapV2(scene: Scene): string {
   lines.push(
     "LEGEND  (id · marker · cell(col,row) · meters(x,y from SW) · detail; " +
       "under= is the surface at the entity's EXACT position — '#(B-x)' = inside that " +
-      "building's footprint, '='/'|' = on a street, ':' = building margin, '.' = open ground; " +
-      "d_street= is the exact distance to the nearest street centerline)",
+      "building's footprint, '=' = on a street centerline (within 1m), ':' = beside a building, " +
+      "'.' = open ground; d_street= is the exact distance to the nearest street centerline)",
   );
   for (const e of scene.equipment) {
     const [col, row] = toCell(e.position);
     const marker = equipMarker.get(e.id) ?? "?";
-    // Exact geometry, not the raster: cell quantization mislabels entities that
-    // hug a wall (~cell-sized error), and the legend's on= already sets the
-    // exact-geometry precedent. The raster char is only the non-building fallback.
-    const inBuilding = scene.buildings.find((b) => pointInPolygon(e.position, b.footprint));
-    const s = surface[row][col];
-    const under = inBuilding ? `#(${inBuilding.id})` : s === "#" ? ":" : s;
+    // ALL of under= derives from exact geometry — never the raster. Mixing
+    // provenances made the legend contradict itself (a street-CELL entity at
+    // d_street=3m showed under== next to d_street=3.0m); every fact in one row
+    // must come from one measurement system.
     let dStreet = Number.POSITIVE_INFINITY;
     for (const st of scene.streets) {
       const d = pointToPolylineMeters(e.position, st.coordinates);
       if (d < dStreet) dStreet = d;
     }
+    const inBuilding = scene.buildings.find((b) => pointInPolygon(e.position, b.footprint));
+    const under = inBuilding
+      ? `#(${inBuilding.id})`
+      : Number.isFinite(dStreet) && dStreet <= 1
+        ? "=" // ON the street centerline
+        : surface[row][col] === "#" || surface[row][col] === ":"
+          ? ":" // beside a building
+          : ".";
     const dStreetStr = Number.isFinite(dStreet) ? ` d_street=${dStreet.toFixed(1)}m` : "";
     let detail: string;
     if (e.kind === "co") {
