@@ -618,6 +618,11 @@ export function toTextMapV2(scene: Scene): string {
       "(topology) is in the LEGEND — each closure's serves= list and the CABLES section's " +
       "source -> target. For connectivity/path questions, read the LEGEND; do not trace glyphs.",
   );
+  lines.push(
+    "THRESHOLDS: when a question states a numeric distance (e.g. 'within ~8m'), compare it " +
+      "against the LEGEND's measurements (d_street=, x/y meters) — categorical labels like " +
+      "under=':' are surface descriptions, not distance judgments.",
+  );
   lines.push("");
   lines.push(
     "LAYER 1/2 — GEOGRAPHY   (. open   : open margin beside a building (INFERRED from footprints — NOT a surveyed sidewalk)   # building   = | street   0-9/A-Z building labels)",

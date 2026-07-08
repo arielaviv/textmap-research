@@ -155,6 +155,27 @@ path recovers to ~100% (legend read), road_misplacement becomes meaningful and
 textmap2 wins it via d_street; overall textmap2 breaks the tie decisively while
 json stays ~40%.
 
+**Run (v2.2 haiku 20-map ×3 repeats):** textmap2 44.3% vs json 37.5%
+(McNemar b=72 c=113, p=0.0033 — BUT repeats at temp 0 are near-identical, so
+the effective n is ~200 unique items and the honest p is weaker). Path
+recovered to 95%; mixed 35% vs 1.7%; containment 83% vs 15%. crossing did NOT
+recover (10% — raster over-approximation of line-polygon intersection at 4–5m
+cells; candidate fundamental limitation). on-street REGRESSED to 25%: sidewalk
+closures at ~4m get `under=:` while the ~8m question threshold makes them
+on-street — the categorical label out-competed the d_street measurement.
+
+## v2.3 amendment + statistics fix (overnight program, $50 cap)
+
+- New THRESHOLDS header rule: numeric distances in questions compare against
+  legend measurements; categorical labels are not distance judgments.
+  (Targets the on-street regression.)
+- Statistics fix: repeats at temperature 0 are correlated, so significance now
+  comes from 60 DISTINCT maps × 1 repeat (real-scene n cap raised 30→60).
+
+**Prediction (pre-run, 60-map haiku, v2.3):** on-street recovers to ≥80% for
+textmap2; overall textmap2 ≥ +6 points over json with McNemar p < 0.05 on
+uncorrelated items; crossing stays weak (~10–20%) pending a structural idea.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

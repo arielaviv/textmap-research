@@ -94,7 +94,7 @@ export async function POST(req: Request) {
   const seed = body.seed ?? 1000;
   const n =
     source === "real"
-      ? Math.max(1, Math.min(body.n ?? 1, 30))
+      ? Math.max(1, Math.min(body.n ?? 1, 60))
       : body.spec
         ? 1 // an explicit spec builds exactly one scene
         : Math.max(1, Math.min(body.n ?? 5, 80));
