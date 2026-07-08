@@ -38,6 +38,11 @@ const seed = Number(arg("seed", "1000"));
 const sourceMode = arg("source", "synthetic"); // "synthetic" | "real"
 const city = arg("city", "nyc");
 const isolate = arg("isolate", "false") === "true"; // representation-only arms (no JSON baseline)
+// Scale sweep: comma list of AOI sizes (real, meters) or blocks-per-side (synthetic).
+const scale = arg("scale", "")
+  .split(",")
+  .map((s) => Number(s.trim()))
+  .filter((x) => Number.isFinite(x) && x > 0);
 
 const outDir = arg("out", dirname(fileURLToPath(import.meta.url)));
 
@@ -70,6 +75,7 @@ async function main() {
       seed,
       isolate,
       includePrompts: true,
+      ...(scale.length ? { scale } : {}),
     }),
   });
   if (!resp.ok) {
@@ -127,6 +133,17 @@ async function main() {
     lines.push(
       `| ${a.arm} | ${pct(a.acc)} | [${pct(a.lo)}, ${pct(a.hi)}] | ${a.n} | ${a.avgInputTokens} | ${a.avgOutputTokens} | ${((a.avgLatencyMs ?? 0) / 1000).toFixed(1)}s | ${pct(a.hallucinationRate ?? 0)} | ${pct(a.missingInfoRate ?? 0)} |`,
     );
+  }
+
+  if (data.perScale?.length) {
+    lines.push("\n## Scale sweep — accuracy vs tokens by AOI size\n");
+    lines.push("| Scale | Arm | Accuracy | 95% CI | n | avg in-tok | avg latency |");
+    lines.push("|-------|-----|----------|--------|---|-----------|--------|");
+    for (const s of data.perScale) {
+      lines.push(
+        `| ${s.scaleM}m | ${s.arm} | ${pct(s.acc)} | [${pct(s.lo)}, ${pct(s.hi)}] | ${s.n} | ${s.avgInputTokens} | ${(s.avgLatencyMs / 1000).toFixed(1)}s |`,
+      );
+    }
   }
 
   lines.push("\n## Accuracy by arm × category\n");

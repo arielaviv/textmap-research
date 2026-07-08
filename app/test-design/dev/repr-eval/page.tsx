@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 import { BENCHMARK_MODELS, MODELS } from "@/experiments/spatial-repr-eval/core/models";
+import { ScaleChart, type ScalePoint } from "./scale-chart";
 import { WorkspaceTab } from "./workspace-tab";
 
 type Arm = "json" | "ascii" | "textmap" | "wkt" | "image" | "verdict";
@@ -90,6 +91,7 @@ interface RunResp {
   config?: { n?: number; totalCalls?: number };
   aggregate: Aggregate;
   perModel?: ModelAgg[];
+  perScale?: ScalePoint[];
   prompts?: Record<string, string>;
   questions?: Record<string, string>;
 }
@@ -184,6 +186,8 @@ export default function ReprEvalPage() {
   const [scenes, setScenes] = useState(20);
   const [isolate, setIsolate] = useState(true);
   const [includePrompts, setIncludePrompts] = useState(false);
+  const [scaleSweep, setScaleSweep] = useState(false);
+  const [scaleLevels, setScaleLevels] = useState("350,700,1400,2800");
   const [onlyCat, setOnlyCat] = useState(""); // "" = all questions; else a category or question id
   // Benchmark sweep runs across many models; `model` (Anthropic-only) still drives the workspace.
   const [evalModels, setEvalModels] = useState<string[]>(BENCHMARK_MODELS);
@@ -207,6 +211,12 @@ export default function ReprEvalPage() {
       ? { source, city, seed, plant }
       : { source, spec: { id: "ws", seed, blocksX, blocksY, plant } };
   const questionIds = onlyCat ? [onlyCat] : undefined;
+  const scale = scaleSweep
+    ? scaleLevels
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .filter((x) => Number.isFinite(x) && x > 0)
+    : undefined;
   const runBody =
     source === "real"
       ? {
@@ -222,10 +232,11 @@ export default function ReprEvalPage() {
           isolate,
           questionIds,
           includePrompts,
+          scale,
         }
       : {
           source,
-          spec: { id: "preview", seed, blocksX, blocksY, plant },
+          ...(scale ? { n: scenes, seed } : { spec: { id: "preview", seed, blocksX, blocksY, plant } }),
           models: evalModels,
           arms: ARMS,
           repeats: 1,
@@ -233,6 +244,7 @@ export default function ReprEvalPage() {
           isolate,
           questionIds,
           includePrompts,
+          scale,
         };
 
   async function loadPreview() {
@@ -462,6 +474,26 @@ export default function ReprEvalPage() {
             </label>
             <label
               className="flex items-center gap-1.5 text-sm"
+              title="Run every scene at each AOI size (real: meters; synthetic: blocks per side) — same centers, growing maps. The headline test: whose token cost grows, whose accuracy holds."
+            >
+              <input
+                type="checkbox"
+                checked={scaleSweep}
+                onChange={(e) => setScaleSweep(e.target.checked)}
+              />
+              scale sweep
+            </label>
+            {scaleSweep && (
+              <input
+                value={scaleLevels}
+                onChange={(e) => setScaleLevels(e.target.value)}
+                aria-label="Scale levels"
+                placeholder={source === "real" ? "350,700,1400,2800" : "2,3,4,5"}
+                className="w-44 rounded border border-zinc-300 bg-white px-2 py-1 font-mono text-xs"
+              />
+            )}
+            <label
+              className="flex items-center gap-1.5 text-sm"
               title="Run only one category or question to save tokens and isolate a result."
             >
               only:
@@ -566,6 +598,53 @@ export default function ReprEvalPage() {
                       </span>
                     )}
                   </div>
+
+                  {/* Scale sweep — the paper's headline figure */}
+                  {run.perScale && run.perScale.length > 0 && (
+                    <div className="overflow-x-auto rounded-lg border border-zinc-300 bg-white p-3">
+                      <div className="mb-1 text-sm font-medium">
+                        Scale sweep — accuracy vs input tokens
+                        {(run.perModel?.length ?? 1) > 1 ? " (all models pooled)" : ""}
+                      </div>
+                      <div className="mb-2 text-xs text-zinc-500">
+                        Same map centers at every size. Structured geometry (json/wkt) pays tokens
+                        for scale; the question is whose accuracy holds per token spent.
+                      </div>
+                      <ScaleChart data={run.perScale} />
+                      <table className="mt-3 text-sm">
+                        <thead>
+                          <tr className="text-zinc-600">
+                            <th className="px-2 text-left">scale</th>
+                            <th className="px-2 text-left">arm</th>
+                            <th className="px-3">acc</th>
+                            <th className="px-3">95% CI</th>
+                            <th className="px-3">n</th>
+                            <th className="px-3">tok in</th>
+                            <th className="px-3">latency</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {run.perScale.map((s) => (
+                            <tr key={`${s.scaleM}-${s.arm}`} className="border-t border-zinc-200">
+                              <td className="px-2 py-1 text-zinc-600">{s.scaleM}m</td>
+                              <td className="px-2 py-1">{s.arm}</td>
+                              <td className="px-3 py-1 text-center font-medium">{pct(s.acc)}</td>
+                              <td className="px-3 py-1 text-center text-zinc-600">
+                                {pct(s.lo)}–{pct(s.hi)}
+                              </td>
+                              <td className="px-3 py-1 text-center text-zinc-600">{s.n}</td>
+                              <td className="px-3 py-1 text-center text-zinc-500">
+                                {s.avgInputTokens.toLocaleString()}
+                              </td>
+                              <td className="px-3 py-1 text-center text-zinc-500">
+                                {(s.avgLatencyMs / 1000).toFixed(1)}s
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
 
                   {/* Benchmark matrix: model × arm accuracy (blank = image arm skipped, no vision) */}
                   {perModel.length > 1 && (
