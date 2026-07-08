@@ -33,6 +33,7 @@ const arms = arg("arms", "json,ascii,textmap,textmap2,wkt,image,verdict")
   .split(",")
   .map((s) => s.trim());
 const repeats = Number(arg("repeats", "1"));
+const concurrency = Number(arg("concurrency", "6")); // server clamps to [1,16]
 const temperature = Number(arg("temp", "0"));
 const seed = Number(arg("seed", "1000"));
 const sourceMode = arg("source", "synthetic"); // "synthetic" | "real"
@@ -76,6 +77,7 @@ async function main() {
       temperature,
       seed,
       isolate,
+      concurrency,
       includePrompts: true,
       ...(scale.length ? { scale } : {}),
     }),
