@@ -30,6 +30,7 @@ import {
   coverageGapBuildings,
   distanceToNearestStreet,
   nearestClosureToBuilding,
+  nearestStreetName,
 } from "./oracle";
 import { buildMapboxStaticUrl, sceneToMapGeometry } from "./map-url";
 import type { EquipmentKind, Scene } from "./scene";
@@ -237,7 +238,7 @@ export function toVerdict(scene: Scene): string {
 
   const eqRows = scene.equipment.map((e) => {
     const dStreet = distanceToNearestStreet(scene, e.id);
-    return `${e.id} (${e.kind}) on_street=${dStreet <= 8} dist_to_street=${dStreet.toFixed(1)}m inside_building=${inside.has(e.id)} serves=[${e.serves.join(",")}]`;
+    return `${e.id} (${e.kind}) on_street=${dStreet <= 8} dist_to_street=${dStreet.toFixed(1)}m nearest_street="${nearestStreetName(scene, e.position) ?? "none"}" inside_building=${inside.has(e.id)} serves=[${e.serves.join(",")}]`;
   });
   const cableRows = scene.cables.map(
     (c) =>
@@ -245,7 +246,7 @@ export function toVerdict(scene: Scene): string {
   );
   const bldgRows = scene.buildings.map(
     (b) =>
-      `${b.id} type=${b.type} nearest_closure=${nearestClosureToBuilding(scene, b.id) ?? "none"} coverage_gap=${gaps.has(b.id)}`,
+      `${b.id} type=${b.type} nearest_closure=${nearestClosureToBuilding(scene, b.id) ?? "none"} nearest_street="${nearestStreetName(scene, b.centroid) ?? "none"}" coverage_gap=${gaps.has(b.id)}`,
   );
 
   return [

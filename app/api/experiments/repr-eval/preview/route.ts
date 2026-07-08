@@ -17,7 +17,9 @@ import {
   interiorBuildings,
   isOnStreet,
   lineCrossesBuildings,
+  nearestClosureOffStreet,
   nearestClosureToBuilding,
+  nearestStreetIsNamed,
   pathToSource,
 } from "@/experiments/spatial-repr-eval/core/oracle";
 import { buildRealScene } from "@/experiments/spatial-repr-eval/core/real-scene";
@@ -110,6 +112,12 @@ export async function POST(req: Request) {
       crosses: co ? lineCrossesBuildings(scene, co.position, blockTarget.centroid, blockTarget.id) : [],
     },
     enclosure: interiorBuildings(scene),
+    nearest_offstreet: (() => {
+      const t =
+        scene.buildings.find((b) => nearestStreetIsNamed(scene, b.centroid))?.id ??
+        scene.buildings[0].id;
+      return { building: t, closure: nearestClosureOffStreet(scene, t) };
+    })(),
   };
 
   return NextResponse.json({

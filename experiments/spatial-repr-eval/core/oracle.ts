@@ -134,6 +134,54 @@ export function equipmentInRoad(scene: Scene): string[] {
   return out;
 }
 
+/** True when a street name is a real name (not the real-scene "street N" placeholder
+ *  for unnamed OSM ways — the same test the textmap legend applies). */
+function isRealStreetName(name: string): boolean {
+  const nm = name.trim();
+  return nm.length > 0 && !/^street \d+$/i.test(nm);
+}
+
+/** Identity of the street nearest to a position: the street NAME when real (so a
+ *  multi-segment street counts as ONE street), else the segment id. */
+export function nearestStreetName(scene: Scene, pos: Coord): string | null {
+  let best: { key: string; d: number } | null = null;
+  for (const s of scene.streets) {
+    if (s.coordinates.length < 2) continue;
+    const d = pointToPolylineMeters(pos, s.coordinates);
+    if (!best || d < best.d) {
+      best = { key: isRealStreetName(s.name) ? s.name.trim() : s.id, d };
+    }
+  }
+  return best?.key ?? null;
+}
+
+/** True when the street nearest `pos` carries a real name. */
+export function nearestStreetIsNamed(scene: Scene, pos: Coord): boolean {
+  let best: { named: boolean; d: number } | null = null;
+  for (const s of scene.streets) {
+    if (s.coordinates.length < 2) continue;
+    const d = pointToPolylineMeters(pos, s.coordinates);
+    if (!best || d < best.d) best = { named: isRealStreetName(s.name), d };
+  }
+  return best?.named ?? false;
+}
+
+/** Nearest closure to a building whose nearest street DIFFERS from the building's —
+ *  the "mixed" question (nearest-distance + street-identity combined). */
+export function nearestClosureOffStreet(scene: Scene, buildingId: string): string | null {
+  const b = scene.buildings.find((x) => x.id === buildingId);
+  if (!b) return null;
+  const home = nearestStreetName(scene, b.centroid);
+  let best: { id: string; d: number } | null = null;
+  for (const e of scene.equipment) {
+    if (e.kind !== "closure") continue;
+    if (nearestStreetName(scene, e.position) === home) continue;
+    const d = haversineMeters(b.centroid, e.position);
+    if (!best || d < best.d) best = { id: e.id, d };
+  }
+  return best?.id ?? null;
+}
+
 /** Buildings in the interior of the cluster — centroid NOT on the convex hull. */
 export function interiorBuildings(scene: Scene): string[] {
   if (scene.buildings.length < 4) return [];

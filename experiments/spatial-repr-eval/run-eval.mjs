@@ -46,7 +46,7 @@ function pct(x) {
 }
 
 // Rough client-side estimate; the server recomputes the exact count (config.totalCalls).
-const QUESTION_COUNT = 9;
+const QUESTION_COUNT = 10;
 
 async function main() {
   const calls = n * models.length * arms.length * QUESTION_COUNT * repeats;

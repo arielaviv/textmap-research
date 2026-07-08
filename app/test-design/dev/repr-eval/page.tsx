@@ -78,7 +78,16 @@ interface RunResp {
   perModel?: ModelAgg[];
 }
 
-const CATEGORIES = ["precise", "gestalt", "relational", "geometric", "search"] as const;
+const CATEGORIES = [
+  "containment",
+  "crossing",
+  "on-street",
+  "nearest",
+  "coverage",
+  "path",
+  "line-intersection",
+  "mixed",
+] as const;
 const pct = (x: number): string => `${(x * 100).toFixed(0)}%`;
 
 const QUESTION_IDS = [
@@ -91,6 +100,7 @@ const QUESTION_IDS = [
   "road_misplacement",
   "blockage",
   "enclosure",
+  "nearest_offstreet",
 ];
 
 export default function ReprEvalPage() {
