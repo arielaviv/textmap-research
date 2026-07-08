@@ -132,7 +132,7 @@ export function toAscii(scene: Scene): string {
     const nodes: ZoneEquipment[] = zEquip.map((e, idx) => {
       const seq = Number(e.id.match(/(\d+)$/)?.[1] ?? idx);
       return {
-        id: `TLV-${zoneId}-${typeCode(e.kind)}-${String(seq).padStart(3, "0")}`,
+        id: `Z-${zoneId}-${typeCode(e.kind)}-${String(seq).padStart(3, "0")}`,
         symbol: GLYPH[e.kind],
         type: e.kind,
         coordinates: e.position,

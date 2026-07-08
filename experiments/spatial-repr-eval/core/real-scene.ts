@@ -242,7 +242,7 @@ export function aoiForCity(
   city: string,
   seed: number,
 ): { minLat: number; minLon: number; maxLat: number; maxLon: number } {
-  const center = CITY_CENTERS[city] ?? CITY_CENTERS["tel-aviv"];
+  const center = CITY_CENTERS[city] ?? CITY_CENTERS.nyc;
   // deterministic small jitter from seed (±~1km)
   const jLng = (((seed * 73) % 100) / 100 - 0.5) * 0.02;
   const jLat = (((seed * 91) % 100) / 100 - 0.5) * 0.02;

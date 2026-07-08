@@ -43,7 +43,7 @@ export async function POST(req: Request) {
   let scene: Scene;
   try {
     if (body.source === "real") {
-      const { buildings, streets } = await fetchRealOSM(body.city ?? "tel-aviv", body.seed ?? 42);
+      const { buildings, streets } = await fetchRealOSM(body.city ?? "nyc", body.seed ?? 42);
       scene = buildRealScene({ id: "ws", buildings, streets, maxBuildings: 12, plant: body.plant });
     } else if (body.spec) {
       scene = makeSyntheticScene(body.spec);

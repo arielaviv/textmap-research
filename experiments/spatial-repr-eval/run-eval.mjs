@@ -36,7 +36,7 @@ const repeats = Number(arg("repeats", "1"));
 const temperature = Number(arg("temp", "0"));
 const seed = Number(arg("seed", "1000"));
 const sourceMode = arg("source", "synthetic"); // "synthetic" | "real"
-const city = arg("city", "tel-aviv");
+const city = arg("city", "nyc");
 const isolate = arg("isolate", "false") === "true"; // representation-only arms (no JSON baseline)
 
 const outDir = arg("out", dirname(fileURLToPath(import.meta.url)));
@@ -45,13 +45,16 @@ function pct(x) {
   return `${(x * 100).toFixed(1)}%`;
 }
 
+// Rough client-side estimate; the server recomputes the exact count (config.totalCalls).
+const QUESTION_COUNT = 9;
+
 async function main() {
-  const calls = n * models.length * arms.length * 6 * repeats;
+  const calls = n * models.length * arms.length * QUESTION_COUNT * repeats;
   console.log(`Running eval → ${url}`);
   console.log(
     `  scenes=${n} models=${models.join(",")} arms=${arms.join(",")} repeats=${repeats} temp=${temperature}`,
   );
-  console.log(`  ~${calls} model calls\n`);
+  console.log(`  ~${calls} model calls (estimate)\n`);
 
   const resp = await fetch(`${url}/api/experiments/repr-eval/run`, {
     method: "POST",
@@ -64,6 +67,7 @@ async function main() {
   }
   const data = await resp.json();
   const { items, aggregate } = data;
+  if (data.config?.totalCalls) console.log(`  server ran ${data.config.totalCalls} calls\n`);
 
   // --- results.csv ---
   const header =

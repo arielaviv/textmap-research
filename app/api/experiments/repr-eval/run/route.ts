@@ -143,7 +143,7 @@ async function buildScenes(
   body: RunBody & { n: number; seed: number },
 ): Promise<Scene[]> {
   if (source === "real") {
-    const city = body.city ?? "tel-aviv";
+    const city = body.city ?? "nyc";
     const out: Scene[] = [];
     for (let i = 0; i < body.n; i++) {
       // Skip AOIs that land on water/parks (no buildings) so one bad seed in a
