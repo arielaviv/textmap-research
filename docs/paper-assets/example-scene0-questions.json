@@ -1,0 +1,12 @@
+{
+  "containment": "List the ids of every equipment item whose point lies INSIDE a building footprint. Fill `equipmentIds` (empty array if none).",
+  "crossing": "List the ids of every cable whose path passes THROUGH a building footprint it does not terminate at. Fill `cableIds` (empty array if none).",
+  "onstreet": "Is equipment CL-A placed on a street (within ~8m of a street centerline), as opposed to off-street / inside a building? Fill `onStreet` (true/false).",
+  "nearest": "Which closure is geographically nearest to building B-0? Fill `closureId` with its id.",
+  "coverage_gap": "Is there any building with NO closure within 35m of it (a coverage gap)? Fill `buildingIds` with every such building (empty array if none).",
+  "topology": "List the equipment on the path from building B-0 to the source (the CO), nearest-first. Fill `equipmentPath` with the ordered ids.",
+  "blockage": "If a straight cable runs from CO-1 to building B-7, list the ids of every OTHER building whose footprint the straight line passes through (exclude B-7). Fill `buildingIds` (empty array if none).",
+  "road_misplacement": "Some equipment may be misplaced INTO a road — within ~2m of a street centerline (in the carriageway) instead of on a sidewalk or verge. List the ids of every such equipment item (exclude the central office). Fill `equipmentIds` (empty array if none).",
+  "enclosure": "List the ids of every building in the INTERIOR of the cluster — its centroid is NOT on the outer perimeter (convex hull) of the buildings. Fill `buildingIds` (empty array if none).",
+  "nearest_offstreet": "Consider building B-0. Its \"home street\" is the street nearest to it. Which closure is nearest to B-0 among the closures whose OWN nearest street is a DIFFERENT street than B-0's home street? Fill `closureId` with its id, or 'none' if every closure sits on the home street."
+}

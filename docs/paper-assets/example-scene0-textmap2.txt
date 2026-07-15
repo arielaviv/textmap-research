@@ -1,0 +1,119 @@
+TEXT MAP v2 — two ALIGNED layers, one grid frame, north-up. 1 cell ≈ 3.0m. col 0..47 = W→E, row 0..27 = N→S (row 0 = north). Cells are space-separated (one symbol = one cell).
+GRID REF — cell(col,row) centre = [lng, lat]:  lng = -73.9944007 + (col+0.5)*2.4258e-5;  lat = 40.7453519 - (row+0.5)*3.6264e-5
+CROSS-REFERENCE: the layers share coordinates. Look up the SAME (col,row) in both layers: an equipment marker over '#' in LAYER 1 sits INSIDE that building; a cable glyph over '#' crosses that building — UNLESS that building is the cable's own source or target (a drop legitimately ENDS inside the building it serves; check CABLES source -> target).
+HOW TO READ (hypothetical example, NOT from this scene): if LAYER 2 shows marker 'q' at (3,1) and LAYER 1 at (3,1) shows '#', that equipment sits INSIDE that building; '=' or '|' there means it sits on a street; ':' or '.' means open ground. The LEGEND's inside= field precomputes building containment exactly for every equipment item.
+GEOMETRY vs TOPOLOGY: the grids show WHERE things are (geometry). WHO connects to whom (topology) is in the LEGEND — each closure's serves= list and the CABLES section's source -> target. For connectivity/path questions, read the LEGEND; do not trace glyphs.
+THRESHOLDS: when a question states a numeric distance (e.g. 'within ~8m'), compare it against the LEGEND's measurements (d_street=, x/y meters) — grid glyphs are drawings, not distance judgments.
+
+LAYER 1/2 — GEOGRAPHY   (. open   : open margin beside a building (INFERRED from footprints — NOT a surveyed sidewalk)   # building   = | street   0-9/A-Z building labels)
+     0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
+00 | = = . . . . . . . . . . . . . . . . . . . . . . : : # # # : : : : . . . . . . . . . . . . . . . | 00
+01 | . . = = = = . . . . . . . . . . . . . . . . . : : # # # # # # # : : : : : . . . . . . . . . . . | 01
+02 | = = . . . . = = = . . . . . . . . . . . . . : : # # # # # # # # # # # # : : : : . . . . . . . . | 02
+03 | . . = = = = . . . = = = . . . . . . . . . : : # # # # 5 # # # # # # # # # # # : : : : : . . . . | 03
+04 | = = . . . . = = = . . . = = = = . . . . : : # # # # # # # # # # # # # # # # # # # # # : : : : : | 04
+05 | . . = = = = . . . = = = . . . . = = = . : # # # # # # # # # # # # 3 # # # # # # # # # # # # # : | 05
+06 | . . . . . . = = = . . . = = = = . . . = = = : # # # # # # # # # # # # # # # # # # # # # # # # : | 06
+07 | . . . . . . . . . = = = . . . . = = = . . . = = = = # # # # # # # # # # # # # # # 7 # # # # : : | 07
+08 | . . . . : : : : . . . . = = = = . . . = = = . . . : = = = : # # # # # # # # # # # # # # # : : . | 08
+09 | . . . : : # # : : : : . : : # : = = = : . . = = = = . . . = = = : # # # # # # # # # # # : : . . | 09
+10 | . . : : # # # # # # : : : # # # # # # = = = : . . . = = = . . . = = = = : # # # # # # : : . . . | 10
+11 | . : : # # # # # # # # # # # # # # # # # # # = = = = . . . = = = . . . . = = = : # # : : . . . . | 11
+12 | : : # # 4 # # # # # : # # # # # # # # # # # # # # : = = = : : . = = = = . . . = = = : . . . . . | 12
+13 | # # # # # # # # # : # # # # # 1 # # # # # # # # # # # # # # = = : : . . = = = . . . = = = = . . | 13
+14 | : : # # # : : : : # # # # # # # # # # # # # # # # # # # # # # # # = = = : : . = = = . . . . = = | 14
+15 | . : : : : : : # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # = = : : . = = = = . . | 15
+16 | . . . . . . : : : # # # # # # # # # # # # 0 # # # # # # # # # 2 # # # # # # # # = = : : : . = = | 16
+17 | . . . . . . . . : : : : : # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # = = : : | 17
+18 | . . . . . . . . . . . : : : : : # # # # # # # : # # # # # # # # # # # # # # # # # # # # # # # = | 18
+19 | . . . . . . . . . . : : # # # # # : : : # # : : # : : # # # # # # # # # # # # # # # # # # # : : | 19
+20 | . . . . . . . . . : : # # # # # # # # # : : : # # # # # : : : # # # # # # # # # # A # # # : : . | 20
+21 | . . . . . . . . : : # 8 # # # # # # # # # # # # # # # : : . : : : : # # # # # # # # # # : : . . | 21
+22 | = = . . . . . : : # # # # # 9 # # # # # # # # # # # : : . . . . . : : : : : # # # # # : : . . . | 22
+23 | . . = = = = : : # # # # # # # # # # # # # # 6 # # : : . . . . . . . . . . : : : : # : : . . . . | 23
+24 | . . . . . . = # # # # # # # # # # # B # # # # # : : . . . . . . . . . . . . . . : : : . . . . . | 24
+25 | . . . . . . : : : = = # # # # # # # # # # # # : : . . . . . . . . . . . . . . . . . . . . . . . | 25
+26 | = = . . . . . . . . : : = = = # # # # # # : : : . . . . . . . . . . . . . . . . . . . . . . . . | 26
+27 | S 0 = = = . . . . . . . . . : : = = # # : : . . . . . . . . . . . . . . . . . . S 5 S 1 . . . . | 27
+
+LAYER 2/2 — NETWORK   (* CO   @ cabinet   a-z closures   - | / \ cable path; drawn UNOCCLUDED — the full position/path even where it overlaps geography)
+     0 0 0 0 0 0 0 0 0 0 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3 4 4 4 4 4 4 4 4
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7
+00 | . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . | 00
+01 | . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . | 01
+02 | . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . | 02
+03 | . . . . . . . . . . . . . . . . . . . . . . . . . . . / . . . . . . . . . . . . . . . . . . . . | 03
+04 | . . . . . . . . . . . . . . . . . . . . . . . . . . / . . . . . . . . . . . . . . . . . . . . . | 04
+05 | . . . . . . . . . . . . . . . . . . . . . . . . . / . . . . . . . / . . . . . . . . . . . . . . | 05
+06 | . . . . . . . . . . . . . . . . . . . . . . . . f . . . . . . . / . . . . . . . . . . . . . . . | 06
+07 | . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . / . . . . . . . . / . . . . . . | 07
+08 | . . . . . . . . . e . . . . . . . . . . . . . . . . . . . . . d . . . . . . . . / . . . . . . . | 08
+09 | . . . . . . . . / . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . / . . . . . . . . | 09
+10 | . . . . . . / / . . . . . . . . . . b . . . . . . . . . . . . . . . . . . . h . . . . . . . . . | 10
+11 | . . . . . / . . . . . . . . . . . / . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . | 11
+12 | . . . . / . . . . . . . . . . . / . . . . . . . . a . . . . . . . . . . . . . . . . . . . . . . | 12
+13 | . . . . . . . . . . . . . . . / . . . . . . . . / . . . . . . . . . . . . . . . . . . . . . . . | 13
+14 | . . . . . . . . . . . . . . . . . . . . . . . / . . . . . . . . . . . . . . . . . . . . . . . . | 14
+15 | . . . . . . . . . . . . . . . . . . . . . . / . . . . . . . . . - c . . . . . . . . . . . . . . | 15
+16 | . . . . . . . . . . . . . . . . . . . . . / . . . . . . . . . - . . . . . . . . . . . . . . . . | 16
+17 | . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . k . . . . | 17
+18 | . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . / . . . . . | 18
+19 | . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . / . . . . . | 19
+20 | . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . / . . . . . . | 20
+21 | . . . . . . . . . . . / . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . | 21
+22 | . . . . . . . . . . / . . . / . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . | 22
+23 | . . . . . . . . . / . . . / . . . . . . . . / . . . . . . . . . . . . . . . . . . . . . . . . . | 23
+24 | . . . . . . . . i . . . . / . . . . / . . / . . . . . . . . . . . . . . . . . . . . . . . . . . | 24
+25 | . . . . . . . . . . . . j . . . . / . . / . . . . . . . . . . . . . . . . . . . . . . . . . . . | 25
+26 | . . . . . . . . . . . . . . . . / . . / . . . . . . . . . . . . . . . . . . . . . . . . . . . . | 26
+27 | * . . . . . . . . . . . . . . l . . g . . . . . . . . . . . . . . . . . . . . . . . . . . . . . | 27
+
+LEGEND  (id · marker · cell(col,row) · meters(x,y from SW) · detail; inside= names the building whose footprint contains the entity's EXACT position (none = outside every footprint); d_street= is the exact distance in meters to the nearest street centerline)
+  CO-1     *  (0,27)  x=2 y=4  source inside=none d_street=0.0m
+  CL-A     a  (25,12)  x=52 y=61  closure serves=B-0 on=S2 "West 25th Street" near "150 West 25th Street" inside=B-0 d_street=4.0m
+  CL-B     b  (18,10)  x=37 y=69  closure serves=B-1 on=S2 "West 25th Street" near "152 West 25th Street" inside=B-1 d_street=4.0m
+  CL-C     c  (33,15)  x=67 y=52  closure serves=B-2 on=S2 "West 25th Street" near "138 West 25th Street" inside=B-2 d_street=4.0m
+  CL-D     d  (31,8)  x=64 y=80  closure serves=B-3 on=S2 "West 25th Street" near "147 West 25th Street" inside=B-3 d_street=4.0m
+  CL-E     e  (9,8)  x=20 y=79  closure serves=B-4 on=S2 "West 25th Street" near "160 West 25th Street" inside=none d_street=4.0m
+  CL-F     f  (24,6)  x=50 y=88  closure serves=B-5 on=S2 "West 25th Street" near "151 West 25th Street" inside=B-5 d_street=4.0m
+  CL-G     g  (18,27)  x=39 y=3  closure serves=B-6 on=S2 "West 25th Street" near "139 West 24th Street" inside=B-6 d_street=4.0m
+  CL-H     h  (38,10)  x=79 y=71  closure serves=B-7 on=S2 "West 25th Street" inside=B-7 d_street=4.0m
+  CL-I     i  (8,24)  x=17 y=15  closure serves=B-8 on=S2 "West 25th Street" near "147 West 24th Street" inside=B-8 d_street=4.0m
+  CL-J     j  (12,25)  x=25 y=11  closure serves=B-9 on=S2 "West 25th Street" near "145 West 24th Street" inside=B-9 d_street=4.0m
+  CL-K     k  (43,17)  x=89 y=41  closure serves=B-10 on=S2 "West 25th Street" near "134 West 25th Street" inside=B-10 d_street=4.0m
+  CL-L     l  (15,27)  x=32 y=3  closure serves=B-11 on=S2 "West 25th Street" near "141 West 24th Street" inside=none d_street=0.0m
+  B-0      0  (21,16)  x=45 y=48  commercial floors=3 addr "150 West 25th Street"
+  B-1      1  (15,13)  x=32 y=60  residential floors=4 addr "152 West 25th Street"
+  B-2      2  (31,16)  x=64 y=46  residential floors=5 addr "138 West 25th Street"
+  B-3      3  (33,5)  x=69 y=90  residential floors=6 addr "147 West 25th Street"
+  B-4      4  (4,12)  x=10 y=61  commercial floors=7 addr "160 West 25th Street"
+  B-5      5  (27,3)  x=56 y=100  residential floors=8 addr "151 West 25th Street"
+  B-6      6  (22,23)  x=47 y=18  residential floors=9 addr "139 West 24th Street"
+  B-7      7  (41,7)  x=85 y=83  residential floors=10
+  B-8      8  (11,21)  x=23 y=26  commercial floors=3 addr "147 West 24th Street"
+  B-9      9  (14,22)  x=30 y=21  residential floors=4 addr "145 West 24th Street"
+  B-10     A  (41,20)  x=84 y=32  residential floors=5 addr "134 West 25th Street"
+  B-11     B  (18,24)  x=39 y=16  residential floors=6 addr "141 West 24th Street"
+
+STREETS  (id · orientation · name)
+  S0   N-S  7th Avenue
+  S1   E-W  West 23rd Street
+  S2   E-W  West 25th Street
+  S3   E-W  West 26th Street
+  S4   N-S  6th Avenue
+  S5   E-W  West 22nd Street
+
+CABLES
+  drop-CL-A      drop          CL-A -> B-0  (25,12)->(21,16)
+  drop-CL-B      drop          CL-B -> B-1  (18,10)->(15,13)
+  drop-CL-C      drop          CL-C -> B-2  (33,15)->(31,16)
+  drop-CL-D      drop          CL-D -> B-3  (31,8)->(33,5)
+  drop-CL-E      drop          CL-E -> B-4  (9,8)->(4,12)
+  drop-CL-F      drop          CL-F -> B-5  (24,6)->(27,3)
+  drop-CL-G      drop          CL-G -> B-6  (18,27)->(22,23)
+  drop-CL-H      drop          CL-H -> B-7  (38,10)->(41,7)
+  drop-CL-I      drop          CL-I -> B-8  (8,24)->(11,21)
+  drop-CL-J      drop          CL-J -> B-9  (12,25)->(14,22)
+  drop-CL-K      drop          CL-K -> B-10  (43,17)->(41,20)
+  drop-CL-L      drop          CL-L -> B-11  (16,26)->(18,24)
