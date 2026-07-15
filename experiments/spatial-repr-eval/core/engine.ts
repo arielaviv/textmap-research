@@ -4,6 +4,7 @@
  * so both produce identical, comparable results.
  */
 
+import { fewshotFor } from "./fewshot";
 import { hintFor } from "./hints";
 import { askedMissingInfo, hallucinatedIds } from "./metrics";
 import { askModel } from "./model";
@@ -59,6 +60,9 @@ export interface EvalConfig {
   /** Grid resolution multiplier [1,2] for textmap arms — v2.6, a LABELED
    *  artifact revision (smaller cells vs more tokens), not an inference trick. */
   zoom?: number;
+  /** Few-shot worked example (GeoFM-proven): a miniature synthetic scene with
+   *  two oracle-answered Q→A demonstrations, in the arm's own format. */
+  fewshot?: boolean;
 }
 
 /** Questions filtered by id OR category. No filter = the frozen 10-question
@@ -238,7 +242,11 @@ export async function runEval(
 
   await runPool(tasks, config.concurrency ?? 6, async (t) => {
     const q = activeQuestions[t.qIndex];
-    const rep = compose(t.arm, bundles.get(t.scene.id)!, config.isolate);
+    let rep = compose(t.arm, bundles.get(t.scene.id)!, config.isolate);
+    if (config.fewshot) {
+      const example = fewshotFor(t.arm);
+      if (example) rep = { ...rep, text: `${example}=== THE REAL SCENE ===\n${rep.text}` };
+    }
     let baseQuestion = q.prompt(t.scene) + (config.hints ? hintFor(q.id, t.arm) : "");
     if (config.citations) {
       baseQuestion +=
@@ -331,8 +339,15 @@ export async function runEval(
         "Re-read the representation and answer again using only ids that appear in it.";
     }
 
-    const correct = answer ? q.grade(t.scene, answer) : false;
-    const badIds = answer ? hallucinatedIds(t.scene, answer) : [];
+    // A malformed answer must cost ITS item, never the whole run.
+    let correct = false;
+    let badIds: string[] = [];
+    try {
+      correct = answer ? q.grade(t.scene, answer) : false;
+      badIds = answer ? hallucinatedIds(t.scene, answer) : [];
+    } catch {
+      error = error ?? "grade-crash: malformed answer";
+    }
     results.push({
       sceneId: t.scene.id,
       model: t.model,

@@ -69,6 +69,7 @@ interface RunBody {
   scan?: boolean; // two-phase scan-then-answer reading
   citations?: boolean; // require per-id evidence quotes (grader ignores them)
   zoom?: number; // textmap grid resolution multiplier [1,2] (v2.6, labeled)
+  fewshot?: boolean; // prepend a mini worked example in the arm's format
 }
 
 const ROTATE: Plant[] = [
@@ -155,6 +156,7 @@ export async function POST(req: Request) {
     scan: body.scan ?? false,
     citations: body.citations ?? false,
     zoom: body.zoom,
+    fewshot: body.fewshot ?? false,
   };
   const { items, prompts, questions } = await runEval(config);
   return NextResponse.json({

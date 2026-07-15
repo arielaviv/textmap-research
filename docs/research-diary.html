@@ -307,6 +307,90 @@ flight).</p>
 </table>
 <p><strong>Project total to date: ≈ $135 spent + $25.74 gateway balance in play.</strong>
 (Figure excludes Claude Code development time — subscription, not API.)</p>
+<h2>2026-07-16 — Booster screening ($25 + $50 top-ups)</h2>
+<p>Pipeline built (hints / voting / turns / scan / citations / zoom / few-shot),
+typechecked, pushed. 8-condition screen + few-shot addendum + full-P screen,
+all: 20 NYC maps (seeds 1000-1019, pairs with certified baseline), haiku,
+textmap2 arm, n=200 each.</p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Acc</th>
+<th>Δ vs 46.0 baseline</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H (hints)</td>
+<td>48.0</td>
+<td>+2.0 (prediction 52±3 MISSED)</td>
+</tr>
+<tr>
+<td>HC</td>
+<td>49.0</td>
+<td>+3.0</td>
+</tr>
+<tr>
+<td>HF (few-shot)</td>
+<td>49.0</td>
+<td>+1 over H (prediction MISSED)</td>
+</tr>
+<tr>
+<td>HCZ</td>
+<td>49.5</td>
+<td>+3.5</td>
+</tr>
+<tr>
+<td>HSCZF</td>
+<td>50.0</td>
+<td>−6 vs HSCZ — few-shot interferes</td>
+</tr>
+<tr>
+<td>HSF</td>
+<td>51.0</td>
+<td>−3 vs HS</td>
+</tr>
+<tr>
+<td>HZ (zoom 1.5×)</td>
+<td>52.0</td>
+<td>+6.0</td>
+</tr>
+<tr>
+<td>HSZ</td>
+<td>53.0</td>
+<td>+7.0</td>
+</tr>
+<tr>
+<td>HSC</td>
+<td>53.5</td>
+<td>+7.5 (rerun after incident 4)</td>
+</tr>
+<tr>
+<td>HS (scan)</td>
+<td>54.0</td>
+<td>+8.0</td>
+</tr>
+<tr>
+<td><strong>HSCZ</strong></td>
+<td><strong>56.0</strong></td>
+<td><strong>+10.0 — best</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Marginals: <strong>scan +4.5 avg (positive in all 4 pairs — the extraction-gap
+thesis measured)</strong>; zoom +1.5 (mixed, +50% tokens); citations +0.3 (noise);
+few-shot DROPPED (interferes with scan — GeoFM's few-shot gain does not
+transfer to scene-scale reading; kept as negative result). Token cost of
+the stack ≈ 2.3×; haiku+HSCZ (56.0) approaches haiku's verdict ceiling
+(61.5) — the pipeline recovers most of the extraction gap.</p>
+<p>Incidents: (4) citations condition induced string-for-array schema
+violations → a grading crash 500'd a whole run; fixed with type coercion at
+ingestion + per-item crash isolation; HSC rerun $1.7. (5) a wrong <code>&amp;</code>
+placement ran a detached launch foreground → 2-min timeout killed the
+driver mid-run, server billed headless ~$1-2 until killed; refired with the
+proven pattern. Final screen in flight: HSCZ + votes 5 + turns 5
+(complete P), predicted 58-61.</p>
 <h2>Standing integrity rules (accumulated)</h2>
 <ol>
 <li>Predictions pre-registered in textmap-v2.md BEFORE every run; kill

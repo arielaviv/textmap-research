@@ -42,6 +42,35 @@ const SYSTEM =
 
 const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 
+/** Models occasionally return a lone string where the schema says array (seen
+ *  with the citations condition). Coerce field types so graders never crash. */
+function coerceAnswer(raw: unknown): Answer {
+  const a = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
+  const arr = (v: unknown): string[] | undefined =>
+    v == null
+      ? undefined
+      : Array.isArray(v)
+        ? v.map(String)
+        : typeof v === "string"
+          ? [v]
+          : undefined;
+  const str = (v: unknown): string | undefined =>
+    typeof v === "string" ? v : v == null ? undefined : String(v);
+  return {
+    equipmentIds: arr(a.equipmentIds),
+    cableIds: arr(a.cableIds),
+    buildingIds: arr(a.buildingIds),
+    equipmentPath: arr(a.equipmentPath),
+    evidence: arr(a.evidence),
+    closureId: str(a.closureId),
+    onStreet: typeof a.onStreet === "boolean" ? a.onStreet : undefined,
+    count: typeof a.count === "number" ? a.count : a.count != null ? Number(a.count) : undefined,
+    direction: str(a.direction),
+    quadrant: str(a.quadrant),
+    missingInfo: str(a.missingInfo),
+  };
+}
+
 export async function askModel(input: AskInput): Promise<AskResult> {
   return modelInfo(input.model).provider === "gateway" ? askGateway(input) : askAnthropic(input);
 }
@@ -100,7 +129,7 @@ async function askAnthropic(input: AskInput): Promise<AskResult> {
     let rawText: string | undefined;
     for (const block of resp.content) {
       if (block.type === "tool_use" && block.name === "submit_answer") {
-        answer = block.input as Answer;
+        answer = coerceAnswer(block.input);
         break;
       }
       if (block.type === "text" && input.freeText) rawText = (rawText ?? "") + block.text;
@@ -205,7 +234,7 @@ async function askGateway(input: AskInput): Promise<AskResult> {
     let answer: Answer | null = null;
     if (call?.arguments) {
       try {
-        answer = JSON.parse(call.arguments) as Answer;
+        answer = coerceAnswer(JSON.parse(call.arguments));
       } catch {
         answer = null;
       }

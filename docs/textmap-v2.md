@@ -429,10 +429,46 @@ baseline (no hints) = 46.0. Predictions:
 - Combos ≈ additive minus overlap; H+SCZ ≈ 58-62
 - Selection rule (BINDING): a booster survives to the $200 program iff its
   marginal gain ≥ +3 points in at least one combination; survivors join P.
+  AMENDED 2026-07-16, mid-screening (after H/HS/HC, before the full table),
+  by author decision: final selection deferred to post-data review — small
+  gains may be kept if they stack. Amendment logged before full data.
 - Scan asymmetry check: winner condition re-run on json arm — predicted
   near-zero gain there (extraction ≠ computation).
 Zoom is v2.6 — a LABELED artifact revision, reported separately from the
 frozen v2.5 baseline. Cost ≈ $20 of the $25 charge.
+
+**RESULTS (2026-07-16, 20 maps each, n=200, baseline 46.0):**
+H 48.0 · HC 49.0 · HCZ 49.5 · HZ 52.0 · HSZ 53.0 · HSC 53.5 · HS 54.0 ·
+**HSCZ 56.0 (+10)**. Marginal effects: **Scan avg +4.5** (positive in all 4
+on/off pairs — the extraction-gap thesis measured), Zoom avg +1.5 (mixed),
+Citations avg +0.3 (noise on accuracy). Hints alone +2.0 (below the
+predicted 52±3 band — prediction MISSED; hints are a foundation, not the
+engine). Token cost of the stack ≈ 2.3× baseline (HSC: 13.9k in / 975 out
+per item). Incident 4: citations induced a string-for-array schema
+violation that 500'd a run — answers now type-coerced at ingestion, grading
+crash-proofed per item.
+
+**Few-shot addendum (GeoFM-proven booster; user-directed):** miniature
+synthetic worked example (seed 999, never in tests), oracle-answered,
+arm-format-faithful. Conditions HF / HSF / HSCZF fired 2026-07-16.
+Predictions REGISTERED WHILE RUNS IN FLIGHT (before any result seen —
+disclosed): HF 53±3 (+5 over H); HSF ≈ HS+2..4 (overlap: both teach
+reading); HSCZF 58-62 (new best). If HSCZF < HSCZ, few-shot's example
+interferes with scan's own extraction — report either way.
+
+**FEW-SHOT RESULTS: HF 49.0 (+1 over H — prediction MISSED), HSF 51.0
+(−3 vs HS), HSCZF 50.0 (−6 vs HSCZ). DROPPED.** The interference case
+happened: the miniature worked example anchors extraction on a 2-building
+toy and shallows the scan of a 12-building scene. Negative result kept for
+the paper: GeoFM's few-shot gain (0.628→0.661 on geometry pairs) does NOT
+transfer to scene-scale reading. Two prediction misses today (H alone,
+few-shot) — both logged.
+
+**Final screen (fired 2026-07-16, pre-registered): HSCZ + votes 5 +
+turns 5 = the complete pipeline P on the same 20 maps.** Prediction:
+58-61 (voting +1-2 over HSCZ — bias dominates noise; turns +1-2 via
+hallucination bounce-backs). Token cost ≈ 10× baseline — the accuracy/cost
+frontier IS the finding.
 
 ## Integrity boundary
 

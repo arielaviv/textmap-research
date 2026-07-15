@@ -138,6 +138,42 @@ flight).
 **Project total to date: ≈ $135 spent + $25.74 gateway balance in play.**
 (Figure excludes Claude Code development time — subscription, not API.)
 
+## 2026-07-16 — Booster screening ($25 + $50 top-ups)
+
+Pipeline built (hints / voting / turns / scan / citations / zoom / few-shot),
+typechecked, pushed. 8-condition screen + few-shot addendum + full-P screen,
+all: 20 NYC maps (seeds 1000-1019, pairs with certified baseline), haiku,
+textmap2 arm, n=200 each.
+
+| Condition | Acc | Δ vs 46.0 baseline |
+|---|---|---|
+| H (hints) | 48.0 | +2.0 (prediction 52±3 MISSED) |
+| HC | 49.0 | +3.0 |
+| HF (few-shot) | 49.0 | +1 over H (prediction MISSED) |
+| HCZ | 49.5 | +3.5 |
+| HSCZF | 50.0 | −6 vs HSCZ — few-shot interferes |
+| HSF | 51.0 | −3 vs HS |
+| HZ (zoom 1.5×) | 52.0 | +6.0 |
+| HSZ | 53.0 | +7.0 |
+| HSC | 53.5 | +7.5 (rerun after incident 4) |
+| HS (scan) | 54.0 | +8.0 |
+| **HSCZ** | **56.0** | **+10.0 — best** |
+
+Marginals: **scan +4.5 avg (positive in all 4 pairs — the extraction-gap
+thesis measured)**; zoom +1.5 (mixed, +50% tokens); citations +0.3 (noise);
+few-shot DROPPED (interferes with scan — GeoFM's few-shot gain does not
+transfer to scene-scale reading; kept as negative result). Token cost of
+the stack ≈ 2.3×; haiku+HSCZ (56.0) approaches haiku's verdict ceiling
+(61.5) — the pipeline recovers most of the extraction gap.
+
+Incidents: (4) citations condition induced string-for-array schema
+violations → a grading crash 500'd a whole run; fixed with type coercion at
+ingestion + per-item crash isolation; HSC rerun $1.7. (5) a wrong `&`
+placement ran a detached launch foreground → 2-min timeout killed the
+driver mid-run, server billed headless ~$1-2 until killed; refired with the
+proven pattern. Final screen in flight: HSCZ + votes 5 + turns 5
+(complete P), predicted 58-61.
+
 ## Standing integrity rules (accumulated)
 
 1. Predictions pre-registered in textmap-v2.md BEFORE every run; kill

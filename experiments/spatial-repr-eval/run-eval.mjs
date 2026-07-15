@@ -65,6 +65,7 @@ const turns = Number(arg("turns", "1"));
 const scan = process.argv.includes("--scan");
 const citations = process.argv.includes("--citations");
 const zoom = Number(arg("zoom", "1"));
+const fewshot = process.argv.includes("--fewshot");
 
 const outDir = arg("out", dirname(fileURLToPath(import.meta.url)));
 
@@ -106,6 +107,7 @@ async function main() {
       ...(scan ? { scan: true } : {}),
       ...(citations ? { citations: true } : {}),
       ...(zoom > 1 ? { zoom } : {}),
+      ...(fewshot ? { fewshot: true } : {}),
     }),
   });
   if (!resp.ok) {
