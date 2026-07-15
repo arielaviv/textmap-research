@@ -1,0 +1,224 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TextMap Research Diary</title><style>
+:root{--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--grid:#e1e0d9}
+body{margin:0;background:#fff;color:var(--ink);font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:780px;margin:0 auto;padding:44px 24px 80px}
+h1{font-size:22px;font-weight:650;margin:0 0 16px}
+h2{font-size:16px;font-weight:650;margin:34px 0 8px;padding-top:14px;border-top:1px solid var(--grid)}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--grid);vertical-align:top}
+th{font-weight:650;color:var(--ink2);font-size:12.5px}
+li{margin:4px 0} code{background:#f4f4f2;padding:1px 5px;border-radius:3px;font-size:12.5px}
+strong{font-weight:700}
+.scroll{overflow-x:auto}
+</style></head><body><div class="wrap"><h1>Research Diary — TextMap project</h1>
+<p>Complete chronological record of everything tried, run, spent, broken, and
+decided. Companion to <code>docs/textmap-v2.md</code> (the pre-registered design
+notebook — predictions live THERE, before each run). This file is the
+process history, OptiMind-style: error analysis → intervention → measured
+result, with costs. Maintained continuously; every entry dated.</p>
+<hr />
+<h2>2026-06-25 — Protocol</h2>
+<p>Eliav's protocol email: all-English maps, ~20 maps, 4 formats (image,
+GeoJSON, WKT, textmap), question categories (list attached by him), ≥3
+models, metrics = correctness / tokens in / tokens out / latency /
+asked-missing-info / hallucination, repeated runs, full logging of every
+prompt+result, and a scale test.</p>
+<h2>Early July — Harness build ("close all gaps")</h2>
+<p>Standalone public repo (extracted from the Nexma monorepo). Built: WKT arm,
+8-category taxonomy + mixed questions, latency/hallucination/missing-info
+metrics, full prompt+response logging (runlog.jsonl), scale sweep, model
+registry incl. gateway vendors, eval-route auth, batch driver
+(run-eval.mjs), results UI. 13 commits. Verification: tsc + selftest
+(oracle sanity 9/9) — no eval spend.</p>
+<h2>2026-07-08/09 — Overnight program ($50 cap; Anthropic account)</h2>
+<p>Iteration by probe($0.1) → validate($3–5) → certify($10) with pre-registered
+predictions per change (full trail: textmap-v2.md).</p>
+<table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Config</th>
+<th>Result</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>main-haiku / v22</td>
+<td>20 maps × 6 arms</td>
+<td>v2 ties json on real maps after synthetic wins</td>
+<td>transfer failure diagnosed from runlogs → protocol lines</td>
+</tr>
+<tr>
+<td>certify-haiku-v23</td>
+<td>60 maps, json+textmap2</td>
+<td><strong>47.0% vs 38.7%, McNemar p=0.0001</strong></td>
+<td>THE headline; distinct maps × 1 repeat (temp-0 repeats are correlated — earlier p=0.0033 on 3 repeats DISCARDED as invalid)</td>
+</tr>
+<tr>
+<td>matrix-sonnet</td>
+<td>20 maps</td>
+<td>56.5 vs 38.5, p&lt;0.0001</td>
+<td>tier curve point</td>
+</tr>
+<tr>
+<td>matrix-opus</td>
+<td>20 maps</td>
+<td>64.5 vs 34.5, p&lt;0.0001</td>
+<td><strong>cost blunder: estimated ~$7, actual $19.31</strong> (anchored on haiku pricing); drained the account. Rule since: compute cost from measured tokens × correct pricing BEFORE launching</td>
+</tr>
+<tr>
+<td>ablation-protocol</td>
+<td>400 calls</td>
+<td>protocol lines are per-line: +35 path (geometry-vs-topology), −15 stale THRESHOLDS hint (removed)</td>
+<td>hints that outlive their defect become noise</td>
+</tr>
+<tr>
+<td>ceiling-verdict</td>
+<td>200 calls</td>
+<td>verdict arm (answers precomputed) = 61.5% haiku</td>
+<td>textmap = 76% of ceiling, json = 63%; absolute scores bounded by answer calibration, not only reading</td>
+</tr>
+<tr>
+<td>scale-haiku + sizes</td>
+<td>350→2800m</td>
+<td>json 9.5k→18.4k tok; textmap 6.7k→9.7k, equal acc</td>
+<td>−47% tokens at 2800m</td>
+</tr>
+</tbody>
+</table>
+<p>Anthropic spend total (whole project, measured from logs): <strong>$67.73</strong> + ~$2
+probes ≈ <strong>$70</strong>. Balance ≈ $0 after the opus run.</p>
+<p><strong>Bottleneck finding:</strong> GeoJSON accuracy FLAT across tiers (38.7 → 38.5 →
+34.5 — differences within noise) while textmap climbs (47.0 → 56.5 → 64.5).
+On identical 20 maps: json 37.5/38.5/34.5 vs textmap 46.0/56.5/64.5.</p>
+<h2>2026-07-12/13 — Write-up prep</h2>
+<p>Results brief (Hebrew email to Eliav sent; his reply: start sending content
+for the paper). Spatial-spread audit: the 60 NYC maps are 350m windows
+inside ONE ~2.2×1.7km neighbourhood (±0.01° jitter), windows overlap —
+logged as caveat + fix (wider jitter) queued. paper-skeleton.md drafted.</p>
+<h2>2026-07-14 — Results brief v2</h2>
+<p>OptiMind-style bar figures (4 SVG figures), plain academic page → PDF via
+headless Edge. CSVs renamed for attachment. Correction adopted: never say
+"haiku beats opus on GeoJSON" — differences are noise; the claim is
+flatness.</p>
+<h2>2026-07-15 — The big day (Vercel AI Gateway, $64.73 credits)</h2>
+<p>Gateway key installed; 11 vendor models registered; forced-tool-call probe
+OK. <strong>Incident 1:</strong> first WKT+image 60-map run — 1,190/1,200 calls 429
+"free tier": account had no PAID credits. $0 lost (failed calls unbilled).
+User topped up.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Run</th>
+<th>Config</th>
+<th>Result</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>holdout-haiku</td>
+<td>60 maps × 2 arms × 6 NEW question types (pre-registered + kill criterion, committed BEFORE run)</td>
+<td><strong>48.3 vs 43.1 (+5.2, inside predicted +3..+8 band)</strong>, p=0.051; 5/6 per-question predictions correct; kill criterion NOT triggered</td>
+<td>$6.3</td>
+</tr>
+<tr>
+<td>2</td>
+<td>certify-london</td>
+<td>60 maps, irregular morphology, doubled jitter (non-overlapping windows)</td>
+<td><strong>46.7 vs 42.2 (+4.5), p=0.023</strong> — generalizes; honest notes: coverage FLIPPED (20 vs 45), textmap halluc 2.7%</td>
+<td>$10.6</td>
+</tr>
+<tr>
+<td>3</td>
+<td>formats-wkt-image</td>
+<td>60 maps, wkt+image arms (pairs with certify seeds)</td>
+<td><strong>4-format table done: textmap 47.0 &gt; json 38.7 &gt; wkt 36.5 ≫ image 18.7 (halluc 32%)</strong></td>
+<td>$7.3</td>
+</tr>
+<tr>
+<td>4a</td>
+<td>matrix-vendors</td>
+<td>20 maps × 4 vendors × 2 arms</td>
+<td>pooled <strong>46.8 vs 35.6, p&lt;0.0001</strong>; Gemini +19.0, Grok +17.5, DeepSeek +15.0, <strong>Qwen −7.0</strong> (does not follow the reading protocol: topology 5/20, halluc 18.5%)</td>
+<td>$8.5</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Incident 2</td>
+<td>first 4a attempt died at undici 300s headers timeout; server kept billing headless</td>
+<td>~$5 lost; fix: undici dispatcher timeout=0 in driver</td>
+<td></td>
+</tr>
+<tr>
+<td>—</td>
+<td>Incident 3</td>
+<td>GPT-5 15-map run killed by local task runner ~10 min in; server kept billing</td>
+<td>~$10–15 lost; fix: detached launches; GPT-5 probe (1 map): textmap 70 vs json 50, out-tokens 5.6k/call (reasoning)</td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td>geofm-task1</td>
+<td>EXTERNAL: GeoFM (2505.17136) Task 1, their 1,400 triplets, their verbatim prompt+grading; disclosed deviation: last-triple extraction grading (haiku narrates; applied to both arms equally)</td>
+<td><strong>kill criterion INVOKED: wkt 58.9 vs textmap 56.6.</strong> Inside it: disjoint 97/76, equals 92/81 (textmap), contains 18/59 (COLLAPSE). Confusion mining: 90/200 contains answered as within — DIRECTION INVERSION, not raster failure</td>
+<td>$7.6</td>
+</tr>
+<tr>
+<td>6</td>
+<td>matrix-gpt5mini</td>
+<td>20 maps × 2 arms, OpenAI column</td>
+<td><strong>textmap 47.5 vs json 37.5 (+10.0)</strong>; clean-items 51.4 vs 39.5 (25 transient fetch errors excluded)</td>
+<td>~$5.5</td>
+</tr>
+<tr>
+<td>7</td>
+<td>formats-gemini</td>
+<td>20 maps, wkt+image on a second vendor</td>
+<td><strong>image collapse REPLICATES: 7.0% acc, 32.5% hallucinated ids</strong> (haiku: 18.7%, 32%); wkt 27.5 below gemini's json 35.5</td>
+<td>~$3</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Account exhausted to the cent:</strong> balance −$0.26 after run 7 (last 25 gemini
+calls bounced on 402 credit-required — excluded, run 375/400 complete).
+<strong>The experimental program (tiers 1+2 + external validation) is COMPLETE.</strong>
+Cross-vendor bottleneck table final: raw GeoJSON 30–38.5% for ALL 8 models
+(4 labs); textmap 46.8–64.5% on 7 of 8 (Qwen the protocol-refusing
+exception). Hallucination on image arm replicated at ~32% on both vendors
+tested.</p>
+<p>Error taxonomy mined from runlogs (all free):
+- coverage: empty-set aversion — models INVENT gaps (26/35 textmap wrong
+  items named 1–3 buildings; every legend d_closure &lt; 35m)
+- crossing asymmetry: json wrong = 33/37 EMPTY (under-detect); textmap
+  wrong = 1–5 spurious cables (raster over-detect) — opposite failure modes
+- topology: residual glyph-tracing despite protocol line
+- GeoFM contains: direction inversion (90/200) — reading rule gap, fixable
+  by hint; touches/crosses = genuine sub-cell raster limits</p>
+<p>→ <code>core/hints.ts</code> written: per-category, arm-specific hints, each citing
+its logged error pattern. Baseline results remain frozen; hint arms are a
+separate labeled condition (OptiMind structure: baseline → error analysis →
+hints → measured lift).</p>
+<p>Vercel spend to date: ~$57 of $64.73 (balance $7.86 at 22:30, runs 6 in
+flight).</p>
+<h2>Standing integrity rules (accumulated)</h2>
+<ol>
+<li>Predictions pre-registered in textmap-v2.md BEFORE every run; kill
+   criteria stated; misses reported (2 invoked to date, both published).</li>
+<li>Temp-0 repeats are correlated — distinct scenes only.</li>
+<li>A question must carry its own judgment criterion (thresholds in prompt).</li>
+<li>Legends carry measurements, not judgments; hint text teaches reading,
+   never scene facts.</li>
+<li>Compute cost from measured tokens × verified pricing before launching.</li>
+<li>Long runs: detached processes + undici timeout off; kill the server if
+   the collector dies (billing continues headless).</li>
+<li>Every run's full prompts+answers in runlog.jsonl, committed.</li>
+</ol>
+<h2>Queued (awaiting ~$200 top-up; designs ready)</h2>
+<p>Hints with/without × all 10 models (incl. Kimi baseline) ~$85 · voting K=5
++ self-correction turns (3 models) ~$67 · hints on hold-out/London +
+vocab-invariance probe + GeoFM+hints (boundary flip test) ~$28. Then: paper
+build (Task 18), SFT paper-2 (Qwen3-8B LoRA, ~$60, separate).</p></div></body></html>
