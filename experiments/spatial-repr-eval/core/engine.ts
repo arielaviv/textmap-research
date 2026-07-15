@@ -5,6 +5,7 @@
  */
 
 import { fewshotFor } from "./fewshot";
+import { executeGeoToolLines, GEO_TOOLS_SPEC } from "./geo-tools";
 import { hintFor } from "./hints";
 import { askedMissingInfo, hallucinatedIds } from "./metrics";
 import { askModel } from "./model";
@@ -57,6 +58,11 @@ export interface EvalConfig {
    *  extraction brief matching what they consume (connectivity / placement)
    *  instead of the generic spatial-facts scan. Only meaningful with scan. */
   scanTargets?: boolean;
+  /** Geometry-tools arm (function-args executor): one batch tool round — the
+   *  model requests planar computations on coordinates IT read from the
+   *  representation; pure math executes (never sees the scene) and results
+   *  are appended to the answer call. See core/geo-tools.ts. */
+  tools?: boolean;
   /** Evidence citations: the answer must cite, per id, the representation line
    *  that justifies it. Grader ignores citations — the forcing function is the
    *  point (careful scanning, less hallucination). */
@@ -104,6 +110,9 @@ export interface ItemResult {
   /** The scan phase's raw extraction (when scan is on) — logged so the record
    *  shows exactly what the answer call anchored on. */
   scanText?: string;
+  /** Tool round record (when tools is on): the model's requests + the computed
+   *  results — the full executor audit trail. */
+  toolsText?: string;
   error?: string;
 }
 
@@ -325,6 +334,40 @@ export async function runEval(
     let inputTokens = scanTokensIn;
     let outputTokens = scanTokensOut;
     let latencyMs = scanLatency;
+
+    let toolsText: string | undefined;
+    if (config.tools) {
+      // Tool round: the model reads coordinates out of the representation and
+      // requests planar computations; pure math runs on exactly what it
+      // supplied (a misread coordinate yields an honestly-computed wrong
+      // number — the executor never sees the scene).
+      const toolRes = await askModel({
+        apiKey: config.apiKey,
+        model: t.model,
+        temperature: config.temperature,
+        representation: rep,
+        question:
+          "Do NOT answer yet. Decide which geometry computations the question below needs, " +
+          "read every required coordinate from the representation, and reply with ONLY JSON " +
+          "tool lines.\n" +
+          GEO_TOOLS_SPEC +
+          `\n\nQUESTION (for context only):\n${q.prompt(t.scene)}`,
+        freeText: true,
+      });
+      inputTokens += toolRes.inputTokens;
+      outputTokens += toolRes.outputTokens;
+      latencyMs += toolRes.latencyMs;
+      const toolResults = toolRes.rawText ? executeGeoToolLines(toolRes.rawText) : null;
+      if (toolResults) {
+        toolsText = `REQUESTS:\n${toolRes.rawText}\n\nRESULTS:\n${toolResults}`;
+        baseQuestion +=
+          "\n\nGEOMETRY TOOL RESULTS (computed exactly from the coordinates YOU supplied in " +
+          `your tool requests — trust these numbers over mental arithmetic):\n${toolResults}`;
+      } else if (toolRes.rawText) {
+        toolsText = `REQUESTS (no valid tool lines):\n${toolRes.rawText}`;
+      }
+    }
+
     let answer: Answer | null = null;
     let error: string | undefined;
     let turnsUsed = 0;
@@ -404,6 +447,7 @@ export async function runEval(
       votesUsed: votes,
       turnsUsed,
       scanText,
+      toolsText,
       error,
     });
     done++;

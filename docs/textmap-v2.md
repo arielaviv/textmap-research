@@ -646,6 +646,29 @@ textmap+hint beats wkt+hint by +2 to +6. Kill: textmap+hint still below
 wkt+hint ⇒ direction was not the bottleneck; reported as a stable loss.**
 Est. ≈ $8.
 
+## Geometry-tools arm (function-args design) — probe pre-registered 2026-07-16
+
+The verdict ceiling (haiku handed precomputed answers = 61.5) proves the
+pipeline's residual errors are compute-bound, not reading-bound: on fresh
+seeds, line-intersection 0%, crossing 35%, mixed 36.7% — all requiring
+arithmetic (raycasting, segment×polygon, hulls, distance ranking). New arm:
+`--tools`. One batch tool round between scan and answer: the model lists
+geometry computations as JSON lines — ops dist / point_to_line_m /
+point_in_polygon / segment_intersects_polygon / midpoint / convex_hull,
+with explicit units ("m" for legend x/y meters, "lnglat" for raw
+coordinates) — the harness executes PURE MATH on model-supplied numbers and
+appends results to the answer call. Integrity: the tools never see the
+scene; every coordinate is read by the model from the representation
+(function-args design, NOT code-over-file, which saturates any parseable
+format and tests programming, not reading — scope note for the paper).
+
+**Probe (before any real validation): 5 scenes, seeds 9700+ (disjoint from
+everything), blockage + crossing only, haiku, CAT+tools, ≈$1. Predictions:
+probe blockage ≥3/5 (from 0/20 baseline), crossing ≥3/5. Kill: ≤1/5 on
+both ⇒ haiku cannot drive function-args tools; the 80-90 path dies and we
+say so.** Full validation (fresh seeds 2000-2019, all 10 questions, vs CAT
+59.5) only if the probe fires, ~$6, after the scale-up chain completes.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

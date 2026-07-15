@@ -68,6 +68,7 @@ interface RunBody {
   turns?: number; // self-correction rounds, clamped [1,5]
   scan?: boolean; // two-phase scan-then-answer reading
   scanTargets?: boolean; // category-aware extraction briefs for path/on-street (with scan)
+  tools?: boolean; // geometry-tools arm: batch function-args round (core/geo-tools.ts)
   citations?: boolean; // require per-id evidence quotes (grader ignores them)
   zoom?: number; // textmap grid resolution multiplier [1,2] (v2.6, labeled)
   fewshot?: boolean; // prepend a mini worked example in the arm's format
@@ -156,6 +157,7 @@ export async function POST(req: Request) {
     turns,
     scan: body.scan ?? false,
     scanTargets: body.scanTargets ?? false,
+    tools: body.tools ?? false,
     citations: body.citations ?? false,
     zoom: body.zoom,
     fewshot: body.fewshot ?? false,
@@ -179,6 +181,7 @@ export async function POST(req: Request) {
       turns,
       scan: body.scan ?? false,
       scanTargets: body.scanTargets ?? false,
+      tools: body.tools ?? false,
       citations: body.citations ?? false,
       zoom: body.zoom ?? 1,
       fewshot: body.fewshot ?? false,
