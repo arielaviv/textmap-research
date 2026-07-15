@@ -200,4 +200,62 @@ export function interiorBuildings(scene: Scene): string[] {
     .map((b) => b.id);
 }
 
+// ---------------------------------------------------------------------------
+// Hold-out oracles (written AFTER the textmap design was frozen at v2.5; used
+// only by the ho_* questions, never during representation iteration).
+// ---------------------------------------------------------------------------
+
+/** Of the two candidate buildings, the one whose centroid is nearer `pos`. */
+export function nearerBuildingOfPair(
+  scene: Scene,
+  pos: Coord,
+  idA: string,
+  idB: string,
+): string | null {
+  const a = scene.buildings.find((b) => b.id === idA);
+  const b = scene.buildings.find((x) => x.id === idB);
+  if (!a || !b) return null;
+  return haversineMeters(pos, a.centroid) <= haversineMeters(pos, b.centroid) ? a.id : b.id;
+}
+
+/** 'north' | 'south': is `pos` north of the building's centroid? */
+export function bearingNorthSouth(scene: Scene, pos: Coord, buildingId: string): string | null {
+  const b = scene.buildings.find((x) => x.id === buildingId);
+  if (!b) return null;
+  return pos[1] > b.centroid[1] ? "north" : "south";
+}
+
+/** Building whose centroid is nearest the midpoint of segment a→b. */
+export function midpointNearestBuilding(scene: Scene, a: Coord, b: Coord): string | null {
+  const mid: Coord = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  let best: { id: string; d: number } | null = null;
+  for (const bl of scene.buildings) {
+    const d = haversineMeters(mid, bl.centroid);
+    if (!best || d < best.d) best = { id: bl.id, d };
+  }
+  return best?.id ?? null;
+}
+
+/** Quadrants (split at the bounds midpoint) holding the max building-centroid
+ *  count. Returns the argmax SET — ties grade as "any of these is correct". */
+export function densestQuadrants(scene: Scene): string[] {
+  const cx = (scene.bounds.minLng + scene.bounds.maxLng) / 2;
+  const cy = (scene.bounds.minLat + scene.bounds.maxLat) / 2;
+  const counts: Record<string, number> = { NE: 0, NW: 0, SE: 0, SW: 0 };
+  for (const b of scene.buildings) {
+    const q = `${b.centroid[1] >= cy ? "N" : "S"}${b.centroid[0] >= cx ? "E" : "W"}`;
+    counts[q]++;
+  }
+  const max = Math.max(...Object.values(counts));
+  return Object.keys(counts).filter((q) => counts[q] === max);
+}
+
+/** The k buildings nearest `pos` by centroid distance, nearest first. */
+export function nearestKBuildings(scene: Scene, pos: Coord, k: number): string[] {
+  return [...scene.buildings]
+    .sort((a, b) => haversineMeters(pos, a.centroid) - haversineMeters(pos, b.centroid))
+    .slice(0, k)
+    .map((b) => b.id);
+}
+
 export const ORACLE_CONSTANTS = { ON_STREET_SNAP_M, COVERAGE_RADIUS_M, IN_ROAD_M };

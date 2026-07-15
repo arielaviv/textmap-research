@@ -46,6 +46,11 @@ const scale = arg("scale", "")
   .split(",")
   .map((s) => Number(s.trim()))
   .filter((x) => Number.isFinite(x) && x > 0);
+// Restrict to specific question ids or categories (e.g. "holdout" or "ho_rank3").
+const questions = arg("questions", "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 const outDir = arg("out", dirname(fileURLToPath(import.meta.url)));
 
@@ -80,6 +85,7 @@ async function main() {
       concurrency,
       includePrompts: true,
       ...(scale.length ? { scale } : {}),
+      ...(questions.length ? { questionIds: questions } : {}),
     }),
   });
   if (!resp.ok) {

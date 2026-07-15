@@ -12,15 +12,20 @@
 import { haversineMeters } from "./geo";
 import { orderedEqual, setEqual } from "./grade";
 import {
+  bearingNorthSouth,
   cablesCrossingForeignBuildings,
   closuresInsideBuildings,
   coverageGapBuildings,
+  densestQuadrants,
   equipmentInRoad,
   interiorBuildings,
   isOnStreet,
   lineCrossesBuildings,
+  midpointNearestBuilding,
+  nearerBuildingOfPair,
   nearestClosureOffStreet,
   nearestClosureToBuilding,
+  nearestKBuildings,
   nearestStreetIsNamed,
   ORACLE_CONSTANTS,
   pathToSource,
@@ -37,7 +42,10 @@ export type Category =
   | "coverage"
   | "path"
   | "line-intersection"
-  | "mixed";
+  | "mixed"
+  /** Hold-out question types written AFTER the v2.5 freeze — never used during
+   *  representation iteration. Run opt-in (questionIds: ho_*), reported separately. */
+  | "holdout";
 
 export interface Answer {
   equipmentIds?: string[];
@@ -46,6 +54,12 @@ export interface Answer {
   closureId?: string;
   onStreet?: boolean;
   equipmentPath?: string[];
+  /** Numeric answer (hold-out counting question). */
+  count?: number;
+  /** 'north' | 'south' (hold-out bearing question). */
+  direction?: string;
+  /** 'NE' | 'NW' | 'SE' | 'SW' (hold-out quadrant question). */
+  quadrant?: string;
   /** The model's report that the representation lacks needed information. The
    *  forced tool call means it can't literally ask — this field records the ask. */
   missingInfo?: string;
@@ -61,6 +75,9 @@ export const ANSWER_TOOL_SCHEMA = {
     closureId: { type: "string", description: "an id, or 'none'" },
     onStreet: { type: "boolean" },
     equipmentPath: { type: "array", items: { type: "string" } },
+    count: { type: "number", description: "numeric answer, when the question asks for a count" },
+    direction: { type: "string", description: "'north' or 'south', when asked" },
+    quadrant: { type: "string", description: "'NE', 'NW', 'SE' or 'SW', when asked" },
     missingInfo: {
       type: "string",
       description:
@@ -232,3 +249,162 @@ export const QUESTIONS: Question[] = [
       (nearestClosureOffStreet(scene, offstreetTargetBuilding(scene)) ?? "none"),
   },
 ];
+
+// ---------------------------------------------------------------------------
+// HOLD-OUT question set — the overfitting control.
+//
+// Written 2026-07-15, AFTER the textmap design was frozen at v2.5. None of these
+// question types (counting, pairwise distance comparison, cardinal bearing,
+// midpoint nearest, quadrant density, ordered ranking) was ever run during
+// representation iteration. They are opt-in (questionIds: ["holdout"] or ho_*
+// ids) so the frozen 10-question protocol is untouched, run ONCE, reported
+// as-is. Target pickers are deterministic with margin guards so boundary
+// degeneracies can't corrupt the oracle (lesson #3 in docs/textmap-v2.md).
+// ---------------------------------------------------------------------------
+
+/** First closure + the pair of buildings it must be compared against: nearest
+ *  building vs the first building ≥ max(1.25×d, d+10m) away — a clear margin. */
+function closerPair(scene: Scene): { eq: SceneEquipment; near: string; far: string } {
+  const eq = scene.equipment.find((e) => e.kind === "closure") ?? scene.equipment[0];
+  const sorted = [...scene.buildings].sort(
+    (a, b) =>
+      haversineMeters(eq.position, a.centroid) - haversineMeters(eq.position, b.centroid),
+  );
+  const near = sorted[0];
+  const dNear = haversineMeters(eq.position, near.centroid);
+  const far =
+    sorted.find((b) => {
+      const d = haversineMeters(eq.position, b.centroid);
+      return d >= Math.max(dNear * 1.25, dNear + 10);
+    }) ?? sorted[sorted.length - 1];
+  return { eq, near: near.id, far: far.id };
+}
+
+/** Building with the LARGEST north–south separation from the first closure —
+ *  the maximal-margin pick, so the bearing is never a coin flip. */
+function bearingTarget(scene: Scene): { eq: SceneEquipment; buildingId: string } {
+  const eq = scene.equipment.find((e) => e.kind === "closure") ?? scene.equipment[0];
+  let best = scene.buildings[0];
+  let bd = -1;
+  for (const b of scene.buildings) {
+    const d = Math.abs(eq.position[1] - b.centroid[1]);
+    if (d > bd) {
+      bd = d;
+      best = b;
+    }
+  }
+  return { eq, buildingId: best.id };
+}
+
+/** CO + the first closure whose midpoint has a UNIQUE nearest building (second
+ *  nearest ≥ 1.15× away). Falls back to the first closure. */
+function midpointPair(scene: Scene): { co: SceneEquipment; cl: SceneEquipment } {
+  const co = coEquip(scene) ?? scene.equipment[0];
+  const closures = scene.equipment.filter((e) => e.kind === "closure");
+  for (const cl of closures) {
+    const mid: [number, number] = [
+      (co.position[0] + cl.position[0]) / 2,
+      (co.position[1] + cl.position[1]) / 2,
+    ];
+    const ds = scene.buildings
+      .map((b) => haversineMeters(mid, b.centroid))
+      .sort((a, b) => a - b);
+    if (ds.length >= 2 && ds[1] >= ds[0] * 1.15) return { co, cl };
+  }
+  return { co, cl: closures[0] ?? scene.equipment[0] };
+}
+
+export const HOLDOUT_QUESTIONS: Question[] = [
+  {
+    id: "ho_count_inside",
+    category: "holdout",
+    prompt: () =>
+      "How many equipment items have their point INSIDE a building footprint? " +
+      "Fill `count` with the number (0 if none).",
+    grade: (scene, a) => a.count === closuresInsideBuildings(scene).length,
+  },
+  {
+    id: "ho_closer",
+    category: "holdout",
+    prompt: (scene) => {
+      const { eq, near, far } = closerPair(scene);
+      // present in lexical order so the ordering never leaks the answer
+      const [x, y] = [near, far].sort();
+      return (
+        `Which building's centroid is geographically NEARER to equipment ${eq.id}: ` +
+        `${x} or ${y}? Fill \`buildingIds\` with exactly that one id.`
+      );
+    },
+    grade: (scene, a) => {
+      const { eq, near, far } = closerPair(scene);
+      const truth = nearerBuildingOfPair(scene, eq.position, near, far);
+      return setEqual(a.buildingIds ?? [], truth ? [truth] : []);
+    },
+  },
+  {
+    id: "ho_bearing",
+    category: "holdout",
+    prompt: (scene) => {
+      const { eq, buildingId } = bearingTarget(scene);
+      return (
+        `Is equipment ${eq.id} NORTH or SOUTH of building ${buildingId}'s centroid? ` +
+        "Fill `direction` with 'north' or 'south'."
+      );
+    },
+    grade: (scene, a) => {
+      const { eq, buildingId } = bearingTarget(scene);
+      return (
+        (a.direction ?? "").trim().toLowerCase() ===
+        bearingNorthSouth(scene, eq.position, buildingId)
+      );
+    },
+  },
+  {
+    id: "ho_midpoint",
+    category: "holdout",
+    prompt: (scene) => {
+      const { co, cl } = midpointPair(scene);
+      return (
+        `Consider the midpoint of the straight segment from ${co.id} to ${cl.id}. ` +
+        "Which building's centroid is nearest to that midpoint? Fill `buildingIds` " +
+        "with exactly that one id."
+      );
+    },
+    grade: (scene, a) => {
+      const { co, cl } = midpointPair(scene);
+      const truth = midpointNearestBuilding(scene, co.position, cl.position);
+      return setEqual(a.buildingIds ?? [], truth ? [truth] : []);
+    },
+  },
+  {
+    id: "ho_quadrant",
+    category: "holdout",
+    prompt: () =>
+      "Split the map into four quadrants (NE / NW / SE / SW) at the midpoint of its " +
+      "bounds. Which quadrant contains the MOST building centroids? Fill `quadrant`.",
+    // ties grade as "any argmax quadrant is correct"
+    grade: (scene, a) =>
+      densestQuadrants(scene).includes((a.quadrant ?? "").trim().toUpperCase()),
+  },
+  {
+    id: "ho_rank3",
+    category: "holdout",
+    prompt: (scene) => {
+      const co = coEquip(scene);
+      return (
+        `List the ids of the 3 buildings whose centroids are geographically nearest to ` +
+        `${co?.id ?? "CO-1"}, ordered nearest first. Fill \`buildingIds\` with exactly ` +
+        "3 ids in order."
+      );
+    },
+    grade: (scene, a) => {
+      const co = coEquip(scene);
+      if (!co) return false;
+      return orderedEqual(a.buildingIds ?? [], nearestKBuildings(scene, co.position, 3));
+    },
+  },
+];
+
+/** Every question, frozen protocol + hold-out — the engine resolves explicit
+ *  questionIds against this; a null/empty filter still returns only QUESTIONS. */
+export const ALL_QUESTIONS: Question[] = [...QUESTIONS, ...HOLDOUT_QUESTIONS];

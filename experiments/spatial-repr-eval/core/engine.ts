@@ -7,7 +7,7 @@
 import { askedMissingInfo, hallucinatedIds } from "./metrics";
 import { askModel } from "./model";
 import { isVisionModel } from "./models";
-import { type Answer, QUESTIONS } from "./questions";
+import { ALL_QUESTIONS, type Answer, QUESTIONS } from "./questions";
 import { buildRepresentations, type RepresentationBundle } from "./representations";
 import type { Scene } from "./scene";
 
@@ -38,11 +38,12 @@ export interface EvalConfig {
   questionIds?: string[];
 }
 
-/** QUESTIONS filtered by id OR category; all of them when no filter is given. */
+/** Questions filtered by id OR category. No filter = the frozen 10-question
+ *  protocol; hold-out questions (category "holdout") run ONLY when named. */
 export function selectQuestions(filter?: string[]): typeof QUESTIONS {
   if (!filter || filter.length === 0) return QUESTIONS;
   const want = new Set(filter);
-  return QUESTIONS.filter((q) => want.has(q.id) || want.has(q.category));
+  return ALL_QUESTIONS.filter((q) => want.has(q.id) || want.has(q.category));
 }
 
 export interface ItemResult {

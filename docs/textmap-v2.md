@@ -239,6 +239,64 @@ generalization), gateway vendors. Certified paper numbers remain the v2.4
 60-map run; v2.5 differs only by the additive d_closure field (validated
 regression-free).
 
+## Spatial spread caveat — the 60 maps are one neighborhood, and they overlap
+
+Logged July 12 while auditing the generalization claim. `aoiForCity` (real-scene.ts:314)
+jitters the AOI center by the seed with a `* 0.02` factor = **±0.01°**. In NYC that
+is ±1.1 km N–S and ±0.84 km E–W, so the 60 certification seeds scatter their
+centers inside a **~2.2 × 1.7 km box** around one Manhattan center. Each map is a
+350 m window. Two consequences a reviewer will (correctly) raise:
+
+1. **One neighborhood, not "across NYC."** All 60 share Manhattan's dense regular
+   grid morphology. The honest paper phrasing is "distinct blocks within one
+   Manhattan neighborhood," not "maps." This is the same limitation as
+   single-city, sharpened — and the second-city run is what earns the word "maps."
+2. **Heavy overlap → weakened inter-trial independence.** The window (350 m) is far
+   larger than the center spacing (~17–22 m lattice over the 2 km box), so
+   neighboring maps share most of their area and the same buildings recur across
+   many maps. McNemar's *pairing* (textmap vs GeoJSON on the same map) is still
+   valid — that is all the test needs — but effective sample diversity is below
+   the nominal n=60. State this; do not lean on "60 independent maps."
+
+**Cheap fix, queued with the budget-gated runs (no code shipped yet):** widen the
+jitter (e.g. `* 0.10` → ~10 km box) so the 350 m windows stop overlapping, giving
+genuinely independent, non-overlapping blocks *within* NYC; combine with a second,
+morphologically different city (curved/irregular streets) to cover both "different
+neighborhood" and "different morphology" in one run. One-line change to the `* 0.02`
+factor plus a `CITY_CENTERS` entry.
+
+## Hold-out question set — pre-registered 2026-07-15, BEFORE first run
+
+The overfitting control. Six NEW question types (`ho_*`, category `holdout`),
+written after the v2.5 freeze; none was ever run during representation
+iteration. Opt-in via questionIds so the frozen 10-question protocol is
+untouched. Deterministic target pickers with margin guards (≥25%/10m distance
+gap, maximal-margin bearing, ≥15% midpoint uniqueness, argmax-set quadrant
+ties) per lesson #3. Plan: run ONCE on the 60 certification scenes (seeds
+1000–1059), json + textmap2, haiku, report as-is — no post-hoc iteration.
+
+**Predictions (falsifiable, logged before the run):**
+
+1. **Overall: textmap2 > json on the hold-out set, but by a NARROWER margin
+   than the tuned set's +8.3** (predicted +3 to +8). Some of the tuned-set gap
+   reflects question–format co-design; the honest expectation is partial
+   transfer, not full.
+2. Per question:
+   - `ho_count_inside`: textmap large win (legend `inside=` rows carry it;
+     json must run point-in-polygon per item). Disclosed: counting-inside
+     re-tests a tuned capability in a new answer form.
+   - `ho_closer`: json wins or tie (exact coords → precise pairwise distance;
+     the grid quantizes to ~4–5m cells).
+   - `ho_bearing`: textmap modest win (rulers make north/south a glance).
+   - `ho_midpoint`: json slight edge (pure coordinate arithmetic).
+   - `ho_quadrant`: textmap large win (density gestalt; json must bin 12+
+     centroids by hand).
+   - `ho_rank3`: json wins (exact top-3 ordering is arithmetic; cell
+     quantization can swap near-equal ranks 2/3).
+3. **Kill criterion:** if json ≥ textmap2 overall on the hold-out set, the
+   certified result must be reported as benchmark-specific and the paper's
+   claim narrowed accordingly. That is what this run is for.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
