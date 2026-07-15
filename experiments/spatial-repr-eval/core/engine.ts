@@ -66,6 +66,9 @@ export interface EvalConfig {
   /** v2.7 labeled artifact revision: building footprint bounding boxes
    *  (`ext=` meters) in the textmap legend — exact inputs for the tools arm. */
   extents?: boolean;
+  /** v2.8 labeled artifact revision: FOOTPRINTS section with exact outline
+   *  vertices (meters) — segment×polygon needs exact rings (probe 2). */
+  rings?: boolean;
   /** Evidence citations: the answer must cite, per id, the representation line
    *  that justifies it. Grader ignores citations — the forcing function is the
    *  point (careful scanning, less hallucination). */
@@ -240,7 +243,11 @@ export async function runEval(
     scenes.set(scene.id, scene);
     bundles.set(
       scene.id,
-      await buildRepresentations(scene, { zoom: config.zoom, extents: config.extents }),
+      await buildRepresentations(scene, {
+        zoom: config.zoom,
+        extents: config.extents,
+        rings: config.rings,
+      }),
     );
   }
 

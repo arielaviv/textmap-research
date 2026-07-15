@@ -295,15 +295,16 @@ export async function toMapImage(
 
 export async function buildRepresentations(
   scene: Scene,
-  opts: { zoom?: number; extents?: boolean } = {},
+  opts: { zoom?: number; extents?: boolean; rings?: boolean } = {},
 ): Promise<RepresentationBundle> {
   const image = await toMapImage(scene);
+  const tmOpts = { zoom: opts.zoom, extents: opts.extents, rings: opts.rings };
   return {
     json: toJSON(scene),
     ascii: toAscii(scene),
     textmap: toTextMap(scene),
-    textmap2: toTextMapV2(scene, { zoom: opts.zoom, extents: opts.extents }),
-    textmap2np: toTextMapV2(scene, { protocol: false, zoom: opts.zoom, extents: opts.extents }),
+    textmap2: toTextMapV2(scene, tmOpts),
+    textmap2np: toTextMapV2(scene, { ...tmOpts, protocol: false }),
     wkt: toWKT(scene),
     verdict: toVerdict(scene),
     image,

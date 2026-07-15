@@ -692,6 +692,32 @@ Kill: blockage still ≤1/5 ⇒ bboxes insufficient (real footprints too
 non-rectangular or the model can't marshal them) — the tools arm ships
 with crossing only, or dies.**
 
+**PROBE 2 RESULT (results/tools-probe2): 0/5 and 0/5 — the bbox path is
+KILLED per the rule, and the audit shows exactly why. The failure flipped
+from under- to OVER-detection: one line "crossing" 6 buildings (truth 3 —
+verified against the oracle for seed 9701: truth [B-0,B-2,B-5], bbox-tool
+superset of 6), every drop "crossing" neighbors. Mechanism: NYC's street
+grid is rotated ~29° from north, so every axis-aligned bbox is ~2-3× the
+footprint area; adjacent buildings' bboxes overlap each other and any line
+corridor. Paired with probe 1 this is a clean result: invented rings
+under-detect, exact-but-fat bboxes over-detect — segment×polygon poisons
+the executor under approximation in EITHER direction; it needs exact
+rings. (Also observed: models included the excluded target building when
+the tool reported it — prompt-discipline noise, unchanged rules.)**
+
+**v2.8 (labeled artifact revision, gated `--rings`): FOOTPRINTS section —
+each building's exact outline vertices in integer meters, same frame as
+x=/y= (closing duplicate dropped). ~150-750 tokens/scene. Note the
+marshaling contrast this sets up vs geojson+tools: same vertices, but
+3-digit meters instead of 15-digit degrees.**
+
+**Probe 3 — same seeds 9700+, CAT+tools+rings (extents off). Predictions:
+blockage ≥3/5, crossing ≥3/5 (executor now receives exact geometry; the
+remaining risk is pure marshaling — copying ~5-9 vertex pairs per
+building). Kill: blockage ≤1/5 with EXACT rings available ⇒ haiku cannot
+marshal ring-scale inputs through function-args; the tools arm is reported
+as a negative result for ring-questions at this model scale.**
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

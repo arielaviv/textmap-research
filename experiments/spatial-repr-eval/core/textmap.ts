@@ -390,7 +390,7 @@ function cableGlyph(dc: number, dr: number): string {
 
 export function toTextMapV2(
   scene: Scene,
-  opts: { protocol?: boolean; zoom?: number; extents?: boolean } = {},
+  opts: { protocol?: boolean; zoom?: number; extents?: boolean; rings?: boolean } = {},
 ): string {
   // protocol=false strips the READING-PROTOCOL lines (cross-reference rule,
   // worked example, geometry-vs-topology, thresholds) while keeping every DATA
@@ -402,9 +402,14 @@ export function toTextMapV2(
   // footprint bounding box in meters to its legend row — a world fact,
   // question-agnostic, feeding the geometry-tools executor exact inputs (the
   // tools probe showed models invent ~4m rings when the legend has none).
+  // rings (v2.8, labeled artifact revision) adds a FOOTPRINTS section with each
+  // building's exact outline vertices in meters — probe 2 showed axis-aligned
+  // bboxes over-detect on rotated street grids (NYC ~29°): segment×polygon
+  // needs exact rings, in either direction of approximation the executor lies.
   const protocol = opts.protocol !== false;
   const zoom = Math.max(1, Math.min(opts.zoom ?? 1, 2));
   const extents = opts.extents === true;
+  const rings = opts.rings === true;
   const { minLng, minLat, maxLng, maxLat } = scene.bounds;
   const widthM = Math.max(1, haversineMeters([minLng, minLat], [maxLng, minLat]));
   const heightM = Math.max(1, haversineMeters([minLng, minLat], [minLng, maxLat]));
@@ -721,6 +726,28 @@ export function toTextMapV2(
       `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}${dc}${ext}`,
     );
   });
+
+  // v2.8: exact outlines — what segment×polygon actually needs. Closing
+  // duplicate vertex dropped; integer meters (same rounding as x=/y=).
+  if (rings && scene.buildings.length) {
+    lines.push("");
+    lines.push(
+      "FOOTPRINTS — exact building outline vertices, meters (x,y from SW), same frame as " +
+        "x=/y=; for any geometric computation involving a building, use its FULL outline, " +
+        "never the grid cells:",
+    );
+    for (const b of scene.buildings) {
+      let ring = b.footprint;
+      if (
+        ring.length > 1 &&
+        ring[0][0] === ring[ring.length - 1][0] &&
+        ring[0][1] === ring[ring.length - 1][1]
+      )
+        ring = ring.slice(0, -1);
+      const verts = ring.map((c) => `[${xM(c)},${yM(c)}]`).join(" ");
+      lines.push(`  ${padRight(b.id, 8)} ${verts}`);
+    }
+  }
 
   if (namedStreets.length) {
     lines.push("");

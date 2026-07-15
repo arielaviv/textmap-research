@@ -66,6 +66,7 @@ const scan = process.argv.includes("--scan");
 const scanTargets = process.argv.includes("--scan-targets");
 const tools = process.argv.includes("--tools");
 const extents = process.argv.includes("--extents");
+const rings = process.argv.includes("--rings");
 const citations = process.argv.includes("--citations");
 const zoom = Number(arg("zoom", "1"));
 const fewshot = process.argv.includes("--fewshot");
@@ -111,6 +112,7 @@ async function main() {
       ...(scanTargets ? { scanTargets: true } : {}),
       ...(tools ? { tools: true } : {}),
       ...(extents ? { extents: true } : {}),
+      ...(rings ? { rings: true } : {}),
       ...(citations ? { citations: true } : {}),
       ...(zoom > 1 ? { zoom } : {}),
       ...(fewshot ? { fewshot: true } : {}),
