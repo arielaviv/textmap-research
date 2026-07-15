@@ -16,10 +16,15 @@ export interface AskInput {
   temperature: number;
   representation: { text: string; image?: { base64: string; mediaType: "image/png" } };
   question: string;
+  /** Free-text mode: no forced tool — used by the scan phase (fact extraction).
+   *  The reply lands in `rawText`; `answer` stays null. */
+  freeText?: boolean;
 }
 
 export interface AskResult {
   answer: Answer | null;
+  /** Plain-text reply when freeText was requested. */
+  rawText?: string;
   inputTokens: number;
   outputTokens: number;
   /** Wall-clock time of the provider call (including network), ms. */
@@ -66,34 +71,43 @@ async function askAnthropic(input: AskInput): Promise<AskResult> {
       model: input.model,
       // Always-thinking models (Fable 5) spend thinking tokens inside max_tokens;
       // 1024 would truncate before the tool call.
-      max_tokens: info.maxTokens ?? 1024,
+      max_tokens: input.freeText ? 1500 : (info.maxTokens ?? 1024),
       // Opus 4.7+/Fable 5 reject sampling params with a 400 — omit temperature.
       ...(info.acceptsTemperature !== false ? { temperature: input.temperature } : {}),
       system: info.alwaysThinking
         ? `${SYSTEM} You MUST call submit_answer exactly once with your final answer.`
         : SYSTEM,
-      tools: [
-        {
-          name: "submit_answer",
-          description: "Submit the structured answer to the question.",
-          input_schema: ANSWER_TOOL_SCHEMA as unknown as Anthropic.Tool["input_schema"],
-        },
-      ],
-      // Forced tool_choice conflicts with thinking; on always-thinking models fall
-      // back to auto + the MUST-call instruction (a null answer grades as error).
-      ...(info.alwaysThinking ? {} : { tool_choice: { type: "tool" as const, name: "submit_answer" } }),
+      ...(input.freeText
+        ? {}
+        : {
+            tools: [
+              {
+                name: "submit_answer",
+                description: "Submit the structured answer to the question.",
+                input_schema: ANSWER_TOOL_SCHEMA as unknown as Anthropic.Tool["input_schema"],
+              },
+            ],
+            // Forced tool_choice conflicts with thinking; on always-thinking models fall
+            // back to auto + the MUST-call instruction (a null answer grades as error).
+            ...(info.alwaysThinking
+              ? {}
+              : { tool_choice: { type: "tool" as const, name: "submit_answer" } }),
+          }),
       messages: [{ role: "user", content }],
     });
 
     let answer: Answer | null = null;
+    let rawText: string | undefined;
     for (const block of resp.content) {
       if (block.type === "tool_use" && block.name === "submit_answer") {
         answer = block.input as Answer;
         break;
       }
+      if (block.type === "text" && input.freeText) rawText = (rawText ?? "") + block.text;
     }
     return {
       answer,
+      rawText,
       inputTokens: resp.usage.input_tokens,
       outputTokens: resp.usage.output_tokens,
       latencyMs: Date.now() - t0,
@@ -110,7 +124,12 @@ async function askAnthropic(input: AskInput): Promise<AskResult> {
 }
 
 interface GatewayResponse {
-  choices?: { message?: { tool_calls?: { function?: { name?: string; arguments?: string } }[] } }[];
+  choices?: {
+    message?: {
+      content?: string;
+      tool_calls?: { function?: { name?: string; arguments?: string } }[];
+    };
+  }[];
   usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
 
@@ -147,22 +166,26 @@ async function askGateway(input: AskInput): Promise<AskResult> {
       body: JSON.stringify({
         model: input.model,
         ...(info.acceptsTemperature !== false ? { temperature: input.temperature } : {}),
-        max_tokens: info.maxTokens ?? 1024,
+        max_tokens: input.freeText ? 1500 : (info.maxTokens ?? 1024),
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: userContent },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "submit_answer",
-              description: "Submit the structured answer to the question.",
-              parameters: ANSWER_TOOL_SCHEMA as unknown as Record<string, unknown>,
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "submit_answer" } },
+        ...(input.freeText
+          ? {}
+          : {
+              tools: [
+                {
+                  type: "function",
+                  function: {
+                    name: "submit_answer",
+                    description: "Submit the structured answer to the question.",
+                    parameters: ANSWER_TOOL_SCHEMA as unknown as Record<string, unknown>,
+                  },
+                },
+              ],
+              tool_choice: { type: "function", function: { name: "submit_answer" } },
+            }),
         stream: false,
       }),
     });
@@ -177,7 +200,8 @@ async function askGateway(input: AskInput): Promise<AskResult> {
       };
     }
     const data = (await res.json()) as GatewayResponse;
-    const call = data.choices?.[0]?.message?.tool_calls?.[0]?.function;
+    const msg = data.choices?.[0]?.message;
+    const call = msg?.tool_calls?.[0]?.function;
     let answer: Answer | null = null;
     if (call?.arguments) {
       try {
@@ -188,6 +212,7 @@ async function askGateway(input: AskInput): Promise<AskResult> {
     }
     return {
       answer,
+      rawText: input.freeText ? (msg?.content ?? undefined) : undefined,
       inputTokens: data.usage?.prompt_tokens ?? 0,
       outputTokens: data.usage?.completion_tokens ?? 0,
       latencyMs: Date.now() - t0,

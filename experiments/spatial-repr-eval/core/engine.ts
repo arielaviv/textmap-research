@@ -4,9 +4,10 @@
  * so both produce identical, comparable results.
  */
 
+import { hintFor } from "./hints";
 import { askedMissingInfo, hallucinatedIds } from "./metrics";
 import { askModel } from "./model";
-import { isVisionModel } from "./models";
+import { isVisionModel, modelInfo } from "./models";
 import { ALL_QUESTIONS, type Answer, QUESTIONS } from "./questions";
 import { buildRepresentations, type RepresentationBundle } from "./representations";
 import type { Scene } from "./scene";
@@ -36,6 +37,21 @@ export interface EvalConfig {
   /** Restrict to specific questions or categories (by id or category name).
    *  Empty/undefined = all questions. Lets you run one category cheaply. */
   questionIds?: string[];
+  /** Append per-category, arm-specific hints (core/hints.ts) to the question.
+   *  Hints teach HOW TO READ a representation, never scene facts. */
+  hints?: boolean;
+  /** Majority voting: K samples at temp 0.7, majority answer wins. Degenerates
+   *  to 1 for models that reject temperature (identical samples). */
+  votes?: number;
+  /** Self-correction rounds (max 5). The verifier uses ONLY representation-
+   *  legal signals (nonexistent ids, missing answer) — NEVER the oracle;
+   *  looping "until correct" would leak ground truth. */
+  turns?: number;
+  /** Two-phase scan-then-answer: an extraction call first ("list the relevant
+   *  facts"), then the answer call reasons over the model's OWN extraction.
+   *  Turns the verdict-ceiling insight into an inference strategy — the model
+   *  builds its own verdict layer. No scene facts are injected. */
+  scan?: boolean;
 }
 
 /** Questions filtered by id OR category. No filter = the frozen 10-question
@@ -67,7 +83,27 @@ export interface ItemResult {
   rawAnswer: Answer | null;
   /** AOI size (m) for scale sweeps; null outside a sweep. */
   scaleM: number | null;
+  /** Pipeline accounting: samples drawn (voting) and correction rounds used. */
+  votesUsed?: number;
+  turnsUsed?: number;
   error?: string;
+}
+
+/** Canonical answer key for majority voting: array fields sorted, metadata
+ *  dropped, so semantically-equal answers vote together. */
+function answerKey(a: Answer): string {
+  const sort = (xs?: string[]) => (xs ? [...xs].sort() : undefined);
+  return JSON.stringify({
+    e: sort(a.equipmentIds),
+    c: sort(a.cableIds),
+    b: sort(a.buildingIds),
+    cl: a.closureId,
+    os: a.onStreet,
+    p: a.equipmentPath, // order matters — not sorted
+    n: a.count,
+    d: a.direction?.trim().toLowerCase(),
+    q: a.quadrant?.trim().toUpperCase(),
+  });
 }
 
 /** Compose the text/image a given arm presents to the model. All arms include
@@ -190,18 +226,101 @@ export async function runEval(
 
   const results: ItemResult[] = [];
   let done = 0;
+  const maxTurns = Math.min(Math.max(config.turns ?? 1, 1), 5);
+  const votesWanted = Math.min(Math.max(config.votes ?? 1, 1), 5);
+
   await runPool(tasks, config.concurrency ?? 6, async (t) => {
     const q = activeQuestions[t.qIndex];
     const rep = compose(t.arm, bundles.get(t.scene.id)!, config.isolate);
-    const res = await askModel({
-      apiKey: config.apiKey,
-      model: t.model,
-      temperature: config.temperature,
-      representation: rep,
-      question: q.prompt(t.scene),
-    });
-    const correct = res.answer ? q.grade(t.scene, res.answer) : false;
-    const badIds = res.answer ? hallucinatedIds(t.scene, res.answer) : [];
+    let baseQuestion = q.prompt(t.scene) + (config.hints ? hintFor(q.id, t.arm) : "");
+
+    let scanTokensIn = 0;
+    let scanTokensOut = 0;
+    let scanLatency = 0;
+    if (config.scan) {
+      // Phase 1: extraction. The model reads the representation and lists the
+      // facts relevant to the question — building its own verdict layer.
+      const scanRes = await askModel({
+        apiKey: config.apiKey,
+        model: t.model,
+        temperature: config.temperature,
+        representation: rep,
+        question:
+          "Do NOT answer yet. First, extract from the representation every fact relevant " +
+          "to the question below — one line per relevant entity, with its exact ids and " +
+          "measurements as they appear. Be complete: cover every entity the question could " +
+          `involve.\n\nQUESTION (for context only):\n${q.prompt(t.scene)}`,
+        freeText: true,
+      });
+      scanTokensIn = scanRes.inputTokens;
+      scanTokensOut = scanRes.outputTokens;
+      scanLatency = scanRes.latencyMs;
+      if (scanRes.rawText) {
+        baseQuestion =
+          `${baseQuestion}\n\nYOUR OWN EXTRACTED FACTS (from your first read — re-verify ` +
+          `anything doubtful against the representation):\n${scanRes.rawText}`;
+      }
+    }
+    // Voting needs sampling diversity — temp-0 (and no-temp) models produce
+    // identical votes, so K degenerates to 1 there.
+    const votes = modelInfo(t.model).acceptsTemperature === false ? 1 : votesWanted;
+
+    let inputTokens = scanTokensIn;
+    let outputTokens = scanTokensOut;
+    let latencyMs = scanLatency;
+    let answer: Answer | null = null;
+    let error: string | undefined;
+    let turnsUsed = 0;
+    let feedback = "";
+
+    for (let turn = 0; turn < maxTurns; turn++) {
+      turnsUsed = turn + 1;
+      const question = feedback ? `${baseQuestion}\n\n${feedback}` : baseQuestion;
+
+      // One attempt = K samples (majority) or a single deterministic call.
+      const sampled: Answer[] = [];
+      for (let v = 0; v < votes; v++) {
+        const res = await askModel({
+          apiKey: config.apiKey,
+          model: t.model,
+          temperature: votes > 1 ? 0.7 : config.temperature,
+          representation: rep,
+          question,
+        });
+        inputTokens += res.inputTokens;
+        outputTokens += res.outputTokens;
+        latencyMs += res.latencyMs;
+        if (res.answer) sampled.push(res.answer);
+        else error = res.error;
+      }
+      if (sampled.length === 0) break; // every sample errored — keep error
+
+      if (sampled.length === 1) {
+        answer = sampled[0];
+      } else {
+        const tally = new Map<string, { n: number; a: Answer }>();
+        for (const a of sampled) {
+          const k = answerKey(a);
+          const cur = tally.get(k);
+          if (cur) cur.n++;
+          else tally.set(k, { n: 1, a });
+        }
+        answer = [...tally.values()].sort((x, y) => y.n - x.n)[0].a;
+      }
+      error = undefined;
+
+      // Verifier — representation-legal signals ONLY (never the oracle):
+      // nonexistent ids are the one hard error a reader can be told about.
+      const badIds = hallucinatedIds(t.scene, answer);
+      if (badIds.length === 0) break;
+      feedback =
+        `PREVIOUS ATTEMPT: ${JSON.stringify(answer)}\n` +
+        `FEEDBACK: the ids [${badIds.join(", ")}] do not exist in this scene. ` +
+        "Re-read the representation and answer again using only ids that appear in it.";
+    }
+
+    const correct = answer ? q.grade(t.scene, answer) : false;
+    const badIds = answer ? hallucinatedIds(t.scene, answer) : [];
     results.push({
       sceneId: t.scene.id,
       model: t.model,
@@ -210,16 +329,17 @@ export async function runEval(
       category: q.category,
       repeat: t.repeat,
       correct,
-      inputTokens: res.inputTokens,
-      outputTokens: res.outputTokens,
-      latencyMs: res.latencyMs,
+      inputTokens,
+      outputTokens,
+      latencyMs,
       hallucinated: badIds.length > 0,
       hallucinatedIds: badIds,
-      missingInfo:
-        res.answer && askedMissingInfo(res.answer) ? (res.answer.missingInfo ?? null) : null,
-      rawAnswer: res.answer,
+      missingInfo: answer && askedMissingInfo(answer) ? (answer.missingInfo ?? null) : null,
+      rawAnswer: answer,
       scaleM: t.scene.sizeM ?? null,
-      error: res.error,
+      votesUsed: votes,
+      turnsUsed,
+      error,
     });
     done++;
     onProgress?.(done, tasks.length);

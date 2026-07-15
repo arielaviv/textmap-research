@@ -57,6 +57,12 @@ const questions = arg("questions", "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+// Pipeline: per-category hints, majority voting K, self-correction turns, and
+// the two-phase scan-then-answer reading strategy.
+const hints = process.argv.includes("--hints");
+const votes = Number(arg("votes", "1"));
+const turns = Number(arg("turns", "1"));
+const scan = process.argv.includes("--scan");
 
 const outDir = arg("out", dirname(fileURLToPath(import.meta.url)));
 
@@ -92,6 +98,10 @@ async function main() {
       includePrompts: true,
       ...(scale.length ? { scale } : {}),
       ...(questions.length ? { questionIds: questions } : {}),
+      ...(hints ? { hints: true } : {}),
+      ...(votes > 1 ? { votes } : {}),
+      ...(turns > 1 ? { turns } : {}),
+      ...(scan ? { scan: true } : {}),
     }),
   });
   if (!resp.ok) {

@@ -381,6 +381,42 @@ inversions (disjoint/equals) where topology IS gestalt-visible. Side
 finding: haiku-2026 + raw WKT (58.9) ≈ GPT-4-2024 zero-shot (62.8) on
 their benchmark. Cost $7.59, zero errors, 2,800 calls.
 
+## Hints / voting / turns program — pre-registered mock, 2026-07-15, BEFORE build+run
+
+Conditions: B baseline (measured) · H +hints · P full pipeline (hints +
+majority voting K=5 @ temp 0.7 + self-correction ≤5 turns). The correction
+loop terminates on VERIFIER PASS (id-existence + schema + self-consistency),
+NEVER on oracle agreement — looping "until correct" would leak ground truth;
+OptiMind's loop used executable solver feedback, ours uses representation-
+legal signals only (disclosed design difference).
+
+Predicted (our benchmark, accuracy %):
+- Haiku: json 38.7→41(H)→44(P); textmap 47.0→54(H)→60(P); wkt 36.5→41(P); image 18.7→21(P)
+- Sonnet: json 38.5→42→45; textmap 56.5→62→67
+- Opus: json 34.5→38→42; textmap 64.5→68→73
+- GPT-5-mini: json 37.5→40→44; textmap 47.5→54→60
+- Gemini: json 35.5→39→43; textmap 54.5→60→66; wkt 27.5→32(P); image 7.0→9(P)
+- DeepSeek: json 38.5→41→44; textmap 53.5→59→64
+- Grok: json 30.0→33→36; textmap 47.5→53→58
+- Qwen: json 38.5→40→42; textmap 31.5→45(H!)→50 — widest bars; hints ARE
+  explicit protocol, its failure is protocol-refusal
+- Kimi (no baseline yet): json ~35→38→41; textmap ~48→54→59
+- GeoFM: wkt 58.9→61-62(H); textmap 56.6→62-64(H) — loss predicted to flip
+
+Falsifiable headline predictions:
+1. hint-delta(textmap) ≈ 2× hint-delta(json): hints fix reading HABITS,
+   not computation ability.
+2. Image barely moves under P (+2-3): scaffolding rescues reading, not
+   perception (identity loss).
+3. The representation gap SURVIVES the pipeline: P-json < B-textmap on
+   haiku. If falsified → claim narrows to "representation OR scaffolding".
+4. Voting alone ≤ +2 (bias ≠ noise); turns ≤ +3 (verifier signals are weak
+   vs executable feedback).
+SFT (paper 2) predictions: base-8B json 25-32 / textmap 30-38; SFT-8B
+textmap 55-65 (rivals frontier-on-geojson), SFT-8B json 38-45. Risk
+disclosed: SFT may partially close the format gap.
+Vocabulary probe DROPPED (user decision: closures stay).
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

@@ -63,6 +63,10 @@ interface RunBody {
   scale?: number[]; // scale sweep: real = AOI sizes in meters; synthetic = blocks per side
   concurrency?: number; // parallel model calls, clamped [1,16]
   includePrompts?: boolean; // attach the (large) prompt/question maps to the response
+  hints?: boolean; // append per-category hints (core/hints.ts) to questions
+  votes?: number; // majority voting K, clamped [1,5]
+  turns?: number; // self-correction rounds, clamped [1,5]
+  scan?: boolean; // two-phase scan-then-answer reading
 }
 
 const ROTATE: Plant[] = [
@@ -103,12 +107,18 @@ export async function POST(req: Request) {
   const activeQuestionCount = selectQuestions(body.questionIds).length;
   // Non-vision models skip the image arm, so count arms per model.
   const armsFor = (m: string) => arms.filter((a) => a !== "image" || isVisionModel(m)).length;
+  const votes = Math.max(1, Math.min(body.votes ?? 1, 5));
+  const turns = Math.max(1, Math.min(body.turns ?? 1, 5));
+  // Upper bound: every item uses all votes on every turn (real usage is lower —
+  // turns beyond the first fire only on verifier failure).
   const totalCalls =
     n *
     Math.max(1, scaleLevels.length) *
     repeats *
     activeQuestionCount *
-    models.reduce((sum, m) => sum + armsFor(m), 0);
+    models.reduce((sum, m) => sum + armsFor(m), 0) *
+    votes *
+    turns;
   if (totalCalls > MAX_CALLS) {
     return NextResponse.json(
       { error: `Refusing ${totalCalls} model calls (cap ${MAX_CALLS}). Lower n/repeats/models.` },
@@ -137,6 +147,10 @@ export async function POST(req: Request) {
     concurrency,
     isolate,
     questionIds: body.questionIds,
+    hints: body.hints ?? false,
+    votes,
+    turns,
+    scan: body.scan ?? false,
   };
   const { items, prompts, questions } = await runEval(config);
   return NextResponse.json({
@@ -152,6 +166,9 @@ export async function POST(req: Request) {
       isolate,
       questionIds: body.questionIds ?? null,
       scale: scaleLevels.length ? scaleLevels : null,
+      hints: body.hints ?? false,
+      votes,
+      turns,
       totalCalls,
     },
     aggregate: aggregate(items),
