@@ -508,10 +508,22 @@ scan stays runnable as a control). Exact templates (engine.ts `SCAN_TARGETS`),
 quoted verbatim so the record predates the run:
 
 - **path**: "extract the CONNECTIVITY GRAPH only: one line per equipment entry
-  with its exact id and the full list of building/equipment ids it serves,
-  exactly as written; one line per cable with its exact id and its two
-  endpoints (source → target). Do NOT extract positions, distances or streets —
-  this question is answered purely by connectivity."
+  — its exact id, its kind/role exactly as written, and the full list of
+  building/equipment ids it serves (if any); one line per cable with its exact
+  id and its two endpoints (source → target). Include EVERY equipment entry,
+  even ones that serve nothing (roots/sources are part of paths). Do NOT
+  extract positions, distances or streets — this question is answered purely
+  by connectivity."
+
+  Template revision, disclosed BEFORE the validation run: a 1-item smoke on
+  seed 9500 (disjoint from the 2000-2019 validation seeds, ~$0.03) caught the
+  first draft dropping serves-nothing roots — the CO has no serves= list, so
+  a serves-lists-and-cables-only extraction omitted it and the answer anchored
+  on a CO-less graph (`["CL-A"]` vs truth `["CL-A","CO-1"]`). The revision
+  adds "include every entry, even ones that serve nothing" — generic wording,
+  no scene values. Also added from the same smoke: the scan extraction is now
+  logged per item (`scanText` in runlog.jsonl) so the record shows exactly
+  what each answer anchored on.
 - **on-street**: "extract the STREET-PLACEMENT facts only: one line per
   equipment entry with its exact id and every fact the representation states
   about its position relative to streets (the street it sits on, its distance

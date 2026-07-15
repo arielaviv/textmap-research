@@ -101,6 +101,9 @@ export interface ItemResult {
   /** Pipeline accounting: samples drawn (voting) and correction rounds used. */
   votesUsed?: number;
   turnsUsed?: number;
+  /** The scan phase's raw extraction (when scan is on) — logged so the record
+   *  shows exactly what the answer call anchored on. */
+  scanText?: string;
   error?: string;
 }
 
@@ -114,10 +117,12 @@ export interface ItemResult {
  *  scene-specific values, so no ground truth leaks. */
 const SCAN_TARGETS: Partial<Record<Category, string>> = {
   path:
-    "extract the CONNECTIVITY GRAPH only: one line per equipment entry with its exact id " +
-    "and the full list of building/equipment ids it serves, exactly as written; one line " +
-    "per cable with its exact id and its two endpoints (source → target). Do NOT extract " +
-    "positions, distances or streets — this question is answered purely by connectivity.",
+    "extract the CONNECTIVITY GRAPH only: one line per equipment entry — its exact id, its " +
+    "kind/role exactly as written, and the full list of building/equipment ids it serves " +
+    "(if any); one line per cable with its exact id and its two endpoints (source → " +
+    "target). Include EVERY equipment entry, even ones that serve nothing (roots/sources " +
+    "are part of paths). Do NOT extract positions, distances or streets — this question " +
+    "is answered purely by connectivity.",
   "on-street":
     "extract the STREET-PLACEMENT facts only: one line per equipment entry with its exact " +
     "id and every fact the representation states about its position relative to streets " +
@@ -282,6 +287,7 @@ export async function runEval(
     let scanTokensIn = 0;
     let scanTokensOut = 0;
     let scanLatency = 0;
+    let scanText: string | undefined;
     if (config.scan) {
       // Phase 1: extraction. The model reads the representation and lists the
       // facts relevant to the question — building its own verdict layer.
@@ -306,6 +312,7 @@ export async function runEval(
       scanTokensOut = scanRes.outputTokens;
       scanLatency = scanRes.latencyMs;
       if (scanRes.rawText) {
+        scanText = scanRes.rawText;
         baseQuestion =
           `${baseQuestion}\n\nYOUR OWN EXTRACTED FACTS (from your first read — re-verify ` +
           `anything doubtful against the representation):\n${scanRes.rawText}`;
@@ -396,6 +403,7 @@ export async function runEval(
       scaleM: t.scene.sizeM ?? null,
       votesUsed: votes,
       turnsUsed,
+      scanText,
       error,
     });
     done++;
