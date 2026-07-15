@@ -99,8 +99,12 @@ async function askAnthropic(input: AskInput): Promise<AskResult> {
     const resp = await client.messages.create({
       model: input.model,
       // Always-thinking models (Fable 5) spend thinking tokens inside max_tokens;
-      // 1024 would truncate before the tool call.
-      max_tokens: input.freeText ? 1500 : (info.maxTokens ?? 1024),
+      // 1024 would truncate before the tool call. Scan (freeText) calls get
+      // their own budget — reasoning models need far more than 1500 there,
+      // while answer-call budgets stay fixed for baseline pairing.
+      max_tokens: input.freeText
+        ? (info.scanMaxTokens ?? Math.max(1500, info.maxTokens ?? 0))
+        : (info.maxTokens ?? 1024),
       // Opus 4.7+/Fable 5 reject sampling params with a 400 — omit temperature.
       ...(info.acceptsTemperature !== false ? { temperature: input.temperature } : {}),
       system: info.alwaysThinking
@@ -195,7 +199,10 @@ async function askGateway(input: AskInput): Promise<AskResult> {
       body: JSON.stringify({
         model: input.model,
         ...(info.acceptsTemperature !== false ? { temperature: input.temperature } : {}),
-        max_tokens: input.freeText ? 1500 : (info.maxTokens ?? 1024),
+        // Scan (freeText) budget is separate — see the Anthropic path's note.
+        max_tokens: input.freeText
+          ? (info.scanMaxTokens ?? Math.max(1500, info.maxTokens ?? 0))
+          : (info.maxTokens ?? 1024),
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: userContent },

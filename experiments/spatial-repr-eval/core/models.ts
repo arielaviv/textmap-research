@@ -17,6 +17,11 @@ export interface ModelInfo {
   /** Max output tokens per call. Models with always-on thinking spend thinking
    *  tokens INSIDE this budget, so they need far more than the answer size. */
   maxTokens?: number;
+  /** Budget for free-text scan calls ONLY (never answer calls, whose budget
+   *  must stay fixed for baseline pairing). For thinking models whose
+   *  reasoning spends inside max_tokens, 1500 silently truncates the
+   *  extraction to nothing. Default: max(1500, maxTokens). */
+  scanMaxTokens?: number;
   /** Always-on thinking (Fable 5): thinking can't be disabled and historically
    *  conflicts with forced tool_choice — use auto + a MUST-call instruction. */
   alwaysThinking?: boolean;
@@ -73,7 +78,13 @@ export const MODELS: ModelInfo[] = [
     maxTokens: 16000,
   },
   { id: "google/gemini-2.5-flash", label: "gemini-2.5-flash", provider: "gateway", vision: true },
-  { id: "google/gemini-2.5-pro", label: "gemini-2.5-pro", provider: "gateway", vision: true },
+  {
+    id: "google/gemini-2.5-pro",
+    label: "gemini-2.5-pro",
+    provider: "gateway",
+    vision: true,
+    scanMaxTokens: 8000, // thinks by default; thoughts spend inside max_tokens
+  },
   {
     id: "xai/grok-4.1-fast-non-reasoning",
     label: "grok-4.1-fast",

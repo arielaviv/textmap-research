@@ -567,6 +567,85 @@ world fact, question-agnostic — deferred as a v2.7 labeled revision. For the
 paper: an engineered-representation pipeline can expose benchmark truths that
 rest on unstated conventions.
 
+**RESULT (2026-07-16, results/scanctl-fresh + catscan-fresh, run once):**
+
+| | CTL (generic scan) | CAT (category targets) | prediction |
+|---|---|---|---|
+| path | 25.0 (n=20) | 55.0 (n=20) | 70-90 **MISSED low** (kill <50 not triggered) |
+| on-street | 70.0 (n=20) | 100.0 (n=20) | 80-90 **exceeded** (above-band = calibration miss) |
+| 8-cat slice | — | 55.0 (n=160) | 52-59 HIT — replicates Run A 55.6 on identical prompts+seeds |
+| composite | — | **59.5 (n=200)** | 58-64 HIT |
+
+CTL confirms on fresh seeds that the generic-scan path collapse is real
+(25%, predicted <40) — not a screening-seed artifact. The category targets
+add +30 on BOTH changed categories (paired, same seeds): placement brief
+70→100, connectivity brief 25→55. Path stops short of hints-only's ~85 for
+the reason the smoke exposed: the explicit graph surfaces the unstated
+closure→CO homing and the model (correctly, per stated facts) refuses the
+conventional answer — prediction miss #4, mechanism understood, published.
+
+**Decision rule applied: CAT composite 59.5 ≥ 59.5 threshold — exactly at
+the pre-registered line, so CAT qualifies by the rule as written. The
+scale-up recipe is CAT** (one pipeline, category-aware extraction briefs,
+all 10 questions — simpler than routing, and its on-street is perfect).
+Noted honestly: routed measured 2.0 pts higher (61.5) on the same seeds;
+assembling a post-hoc "best of both" (hints-only for path, CAT for the
+rest) would be recipe-shopping and is NOT done without a fresh
+pre-registered validation.
+
+Per-category observation, both fresh-seed runs: line-intersection 0/20
+(identical in Run A and CAT — a pre-existing HSCZ hole, 0 errors). The
+scanText log shows why: the question demands mental raycasting (~100-cell
+line walk × footprint tests) — compute-bound, not reading-bound. The same
+executor-shaped boundary that killed voting/turns; a deterministic tool,
+not a better prompt, is the fix. Kept as a negative result for the paper.
+
+## Cross-model pipeline scale-up — pre-registered 2026-07-16, BEFORE the runs
+
+Question: does the CAT pipeline (hints + category-aware scan + citations +
+zoom 2 — tuned entirely on HAIKU's error taxonomy) transfer to other
+models? Design: per model, CAT on textmap2, seed 1000, paired with that
+model's existing plain-textmap2 baseline (same scenes; within-model
+comparison, so screening-seed reuse is legitimate — no recipe was tuned on
+any non-haiku model). Kimi has no baseline → gets one (json+textmap2
+plain) first. Cost forces two models to n=10 maps (first 10 scenes of
+their baselines — still paired): gemini-2.5-pro and sonnet-4.6. Sonnet's
+baseline ran direct-Anthropic; its pipeline runs via the gateway (same
+model, different billing route — disclosed). Engineering note, disclosed:
+free-text scan calls now use a per-model budget (`scanMaxTokens`,
+default max(1500, maxTokens)) because reasoning models spend thoughts
+inside max_tokens and 1500 silently truncated extractions to nothing;
+haiku's scan budget is unchanged (1500), so today's validation numbers
+stand. Answer-call budgets untouched everywhere (pairing).
+
+| Model | plain textmap2 (measured) | CAT predicted | n |
+|---|---|---|---|
+| deepseek-v3.2 | 53.5 | 60-68 | 200 |
+| gemini-2.5-pro | 54.5 | 60-70 | 100 |
+| grok-4.1-fast | 47.5 | 54-64 | 200 |
+| gpt-5-mini | 47.5 | 55-65 | 200 |
+| qwen-3-235b | 31.5 (protocol refuser) | 35-55 wide — the stress test | 200 |
+| kimi-k2 | predict 40-50 (baseline first) | baseline +8-15 | 200 |
+| sonnet-4.6 | 56.5 | 62-72 | 100 |
+
+**Success criterion: CAT > plain textmap2 on ≥6 of 7 models (one-sided
+sign test, 7/7 p=.008, 6/7 p=.063). Kill: ≤4/7 positive ⇒ the pipeline is
+haiku-specific tuning, reported as such.** Qwen counts toward the tally
+like any model. Est. cost ≈ $31 (haiku CAT run = 31.5k in-tok/item anchors
+the estimate; sonnet ≈ $11 is the big line).
+
+**GeoFM Task-1 rerun with direction hints — same prereg block.** Their
+1,400 triplets, their prompt + grading, haiku, both arms, PLUS one extra
+system bullet per arm: the arm's direction rule from core/hints.ts
+(symmetric help, quoted in the runner; no-hint runs remain the baseline).
+Baseline: wkt 58.9 > textmap 56.6 (kill criterion invoked); textmap's loss
+concentrated in contains (18% vs wkt 59%; 90/200 direction inversions).
+**Predictions: textmap contains 18 → 55-75; textmap overall → 62-68; wkt
+overall → 59-63 (its direction errors are smaller); boundary FLIPS —
+textmap+hint beats wkt+hint by +2 to +6. Kill: textmap+hint still below
+wkt+hint ⇒ direction was not the bottleneck; reported as a stable loss.**
+Est. ≈ $8.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

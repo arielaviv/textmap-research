@@ -37,6 +37,11 @@ const arms = arg("arms", "wkt,textmap").split(",").map((s) => s.trim());
 const nItems = Number(arg("n", "1400"));
 const concurrency = Number(arg("concurrency", "16"));
 const outDir = arg("out", "results/geofm-task1");
+// Boundary-flip test: append each arm's direction rule (verbatim from
+// core/hints.ts geofm_pair) as one extra bullet on that arm's system prompt.
+// Symmetric — BOTH arms get their matched rule — and disclosed as a labeled
+// condition; their verbatim prompt stays the no-hint baseline.
+const hint = process.argv.includes("--hint");
 const key = process.env.AI_GATEWAY_API_KEY;
 if (!dataDir || !key) {
   console.error("need --data <dir> and AI_GATEWAY_API_KEY");
@@ -61,6 +66,10 @@ The predicates are defined by DE-9IM and Open Geospatial Consortium. If A equals
 
 - Return in the format (Geometry type A, PREDICATE, geometry type B), and nothing else. Geometry types are Point, LineString, Polygon.
 - MAKE SURE the PREDICATE in your output is one of the seven predicates stated.`;
+
+// Direction rules (verbatim from core/hints.ts geofm_pair.byArm), one per arm.
+const HINT_TEXTMAP = `- Direction rule: if every b-cell is also an a-cell (and A has more cells), then A CONTAINS B. If every a-cell is also a b-cell, then A is WITHIN B. Check which set is the subset before choosing contains vs within.`;
+const HINT_WKT = `- Direction rule: A contains B when all of B's vertices lie inside/on A and A extends beyond B. A is within B in the reverse case. Verify which geometry is larger before choosing contains vs within.`;
 
 // ---------------------------------------------------------------------------
 // tiny WKT parser (POINT / LINESTRING / POLYGON, as in their dataset)
@@ -317,7 +326,7 @@ async function runArm(arm) {
       let user;
       let system;
       if (arm === "wkt") {
-        system = SYSTEM_WKT;
+        system = hint ? `${SYSTEM_WKT}\n${HINT_WKT}` : SYSTEM_WKT;
         user = `\nGeometry A: ${rel.geometry_subject}\nGeometry B: ${rel.geometry}\n`;
       } else {
         const gA = parseWKT(rel.geometry_subject);
@@ -326,7 +335,7 @@ async function runArm(arm) {
           rows.push({ i, arm, predicate: rel.predicate, correct: false, error: "wkt-parse" });
           continue;
         }
-        system = SYSTEM_TEXTMAP;
+        system = hint ? `${SYSTEM_TEXTMAP}\n${HINT_TEXTMAP}` : SYSTEM_TEXTMAP;
         user = `\n${toTextmapPair(gA, gB)}\n`;
       }
       const r = await ask(system, user);
@@ -373,7 +382,7 @@ writeFileSync(
 );
 
 // report
-let report = `# GeoFM Task-1 external validation — ${model}\n\nItems: their ${items.length}-triplet test split, zero-shot, their prompt + grading (full-triple match).\nTheir baselines (recomputed from their per-item outputs): GPT-4 zero-shot 0.628, GPT-4 few-shot 0.661, GPT-3.5 zero-shot 0.369.\n\n`;
+let report = `# GeoFM Task-1 external validation — ${model}${hint ? " — WITH direction-rule hints (both arms, labeled condition)" : ""}\n\nItems: their ${items.length}-triplet test split, zero-shot, their prompt + grading (full-triple match).\nTheir baselines (recomputed from their per-item outputs): GPT-4 zero-shot 0.628, GPT-4 few-shot 0.661, GPT-3.5 zero-shot 0.369.\n\n`;
 for (const arm of arms) {
   const rows = all.filter((r) => r.arm === arm);
   const ok = rows.filter((r) => r.correct).length;
