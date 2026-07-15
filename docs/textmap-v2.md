@@ -297,6 +297,47 @@ ties) per lesson #3. Plan: run ONCE on the 60 certification scenes (seeds
    certified result must be reported as benchmark-specific and the paper's
    claim narrowed accordingly. That is what this run is for.
 
+**RESULT (2026-07-15, results/holdout-haiku, run once, no iteration):**
+textmap2 48.3% vs json 43.1% — **+5.2, inside the pre-registered +3..+8 band**;
+McNemar b=52/c=33, χ²=3.81, **p=0.051** (boundary — reported as-is; the
+hold-out is the transfer control, the certified tuned-set run remains the
+headline). Per-question: 5/6 directional predictions correct — count_inside
+38/10 (textmap, predicted), closer 97/95 (tie, predicted), bearing 90/85
+(textmap, predicted), midpoint 15/25 (json, predicted), quadrant 40/33
+(textmap, predicted direction, smaller magnitude), rank3 10/10 (predicted
+json win; both at floor — ordered-triple exactness is hard for haiku in any
+format). Kill criterion NOT triggered. Token advantage persists (6.9k vs
+10.1k avg in). Zero errors.
+
+## Second city — London (2026-07-15, results/certify-london, run once)
+
+Morphology generalization + the overlap fix in one run: irregular pre-modern
+street network (Soho/Covent Garden, ~60 street segments per scene vs
+Manhattan's ~18), doubled jitter so the 60 windows are mostly non-overlapping.
+**textmap2 46.7% vs json 42.2% — +4.5, McNemar b=79/c=52, χ²=5.16, p=0.023.**
+The certified NYC gap (+8.3) does not fully transfer but the advantage is
+present and significant on unseen morphology. Tokens 6.8k vs 10.4k. Honest
+notes: coverage FLIPPED (tm 20% vs json 45% — the 35m gap-scan degrades on
+London's cluttered grid; report as a morphology-sensitive weakness);
+textmap hallucinated-id rate 2.7% (vs 0.8% NYC) — denser glyph field.
+Cross-city summary: NYC +8.3 (p=0.0001), London +4.5 (p=0.023), hold-out
+questions +5.2 (p=0.051) — three independent tests, one direction.
+
+## Cross-vendor matrix (2026-07-15, results/matrix-vendors, 20 maps each)
+
+Pooled: textmap2 46.8% vs json 35.6% — +11.2, McNemar b=137/c=48, χ²=41.86,
+p<0.0001, zero errors. Per model: Gemini 2.5 Pro +19.0 (54.5/35.5), Grok 4.1
+fast +17.5 (47.5/30.0), DeepSeek v3.2 +15.0 (53.5/38.5) — all LARGER than
+haiku's +8.3 — and one exception: **Qwen-3-235B −7.0 (31.5/38.5)**. Diagnosis
+from per-question rows: Qwen's loss concentrates in topology (5/20 textmap vs
+18/20 json) and it hallucinates ids at 18.5% on textmap (others ~0%) — it
+traces glyphs instead of reading the legend's serves= topology, i.e. it does
+NOT follow the reading protocol. Finding #7: **the engineered representation
+transfers across 3 of 4 vendors with larger gains than Anthropic's ladder;
+protocol-following itself is model-dependent** (per-model protocol
+calibration = future work). The bottleneck result is now cross-vendor: raw
+GeoJSON reading sits at 30–38.5% for EVERY model tested (7 models, 4 labs).
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
