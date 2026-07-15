@@ -294,6 +294,19 @@ export function buildRealScene(input: RealSceneInput): Scene {
 const CITY_CENTERS: Record<string, Coord> = {
   "tel-aviv": [34.7806, 32.0809],
   nyc: [-73.984, 40.7549],
+  // Second-city generalization: irregular pre-modern street network (vs
+  // Manhattan's regular grid), English names. Center ≈ Covent Garden.
+  london: [-0.1276, 51.5074],
+};
+
+/** Seed-jitter range in degrees. nyc keeps the historical 0.02 so the 60
+ *  certified seeds reproduce their exact scenes; london doubles it so 350m
+ *  windows land ~450m apart on average — mostly non-overlapping samples
+ *  (the overlap caveat logged in docs/textmap-v2.md). */
+const CITY_JITTER: Record<string, number> = {
+  "tel-aviv": 0.02,
+  nyc: 0.02,
+  london: 0.04,
 };
 
 export function cityList(): string[] {
@@ -310,9 +323,9 @@ export function aoiForCity(
   sizeM = 350,
 ): { minLat: number; minLon: number; maxLat: number; maxLon: number } {
   const center = CITY_CENTERS[city] ?? CITY_CENTERS.nyc;
-  // deterministic small jitter from seed (±~1km)
-  const jLng = (((seed * 73) % 100) / 100 - 0.5) * 0.02;
-  const jLat = (((seed * 91) % 100) / 100 - 0.5) * 0.02;
+  const jitter = CITY_JITTER[city] ?? 0.02;
+  const jLng = (((seed * 73) % 100) / 100 - 0.5) * jitter;
+  const jLat = (((seed * 91) % 100) / 100 - 0.5) * jitter;
   const lng = center[0] + jLng;
   const lat = center[1] + jLat;
   const halfLat = sizeM / 2 / 110540;
