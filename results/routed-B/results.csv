@@ -1,0 +1,66 @@
+sceneId,model,arm,questionId,category,repeat,correct,inputTokens,outputTokens,latencyMs,hallucinated,hallucinatedIds,missingInfo,scaleM,error
+scene-3,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6901,35,1111,false,,,,
+scene-1,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6923,35,1170,false,,,,
+scene-2,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6931,35,1192,false,,,,
+scene-6,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6906,35,1220,false,,,,
+scene-3,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6936,45,1357,false,,,,
+scene-0,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,7016,45,1422,false,,,,
+scene-5,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,7061,45,1424,false,,,,
+scene-6,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6941,45,1431,false,,,,
+scene-7,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6889,45,1463,false,,,,
+scene-4,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6937,35,1497,false,,,,
+scene-2,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6966,45,1528,false,,,,
+scene-5,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,7026,35,1529,false,,,,
+scene-4,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6972,45,1549,false,,,,
+scene-7,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6854,35,1592,false,,,,
+scene-1,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6958,45,1674,false,,,,
+scene-0,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6981,35,1682,false,,,,
+scene-8,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6985,45,1003,false,,,,
+scene-15,anthropic/claude-haiku-4.5,textmap2,topology,path,0,false,0,0,519,false,,,,"gateway anthropic/claude-haiku-4.5 503: The deployment is currently unavailable
+
+INTERNAL_FUNCTION_SERVICE_UNAVAILABLE
+
+fra1::hkqhn-1784152999688-b8776ac94eb7
+"
+scene-9,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,7016,35,1041,false,,,,
+scene-11,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6848,35,839,false,,,,
+scene-9,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,7051,45,1073,false,,,,
+scene-13,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6881,35,800,false,,,,
+scene-17,anthropic/claude-haiku-4.5,textmap2,topology,path,0,false,0,0,76,false,,,,"gateway anthropic/claude-haiku-4.5 503: The deployment is currently unavailable
+
+INTERNAL_FUNCTION_SERVICE_UNAVAILABLE
+
+fra1::cqfhn-1784153000280-e56a9ff3e237
+"
+scene-18,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,false,0,0,71,false,,,,"gateway anthropic/claude-haiku-4.5 503: The deployment is currently unavailable
+
+INTERNAL_FUNCTION_SERVICE_UNAVAILABLE
+
+fra1::xx6fv-1784153000314-d6c595133d34
+"
+scene-16,anthropic/claude-haiku-4.5,textmap2,topology,path,0,false,0,0,194,false,,,,"gateway anthropic/claude-haiku-4.5 503: The deployment is currently unavailable
+
+INTERNAL_FUNCTION_SERVICE_UNAVAILABLE
+
+fra1::rhl9r-1784153000334-7b8b9f20e342
+"
+scene-19,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,false,0,0,69,false,,,,"gateway anthropic/claude-haiku-4.5 503: The deployment is currently unavailable
+
+INTERNAL_FUNCTION_SERVICE_UNAVAILABLE
+
+fra1::85j8h-1784153000356-b6edad4c5cdf
+"
+scene-12,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,false,6918,35,974,false,,,,
+scene-10,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6950,35,1094,false,,,,
+scene-14,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,7017,35,998,false,,,,
+scene-8,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6950,35,1505,false,,,,
+scene-13,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6916,45,1084,false,,,,
+scene-10,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6985,45,1376,false,,,,
+scene-14,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,7052,45,1277,false,,,,
+scene-15,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6829,35,1293,false,,,,
+scene-11,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6883,45,1604,false,,,,
+scene-16,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,7076,35,998,false,,,,
+scene-12,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6953,45,1711,false,,,,
+scene-17,anthropic/claude-haiku-4.5,textmap2,onstreet,on-street,0,true,6898,35,1090,false,,,,
+scene-19,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,6892,45,1518,false,,,,
+scene-18,anthropic/claude-haiku-4.5,textmap2,topology,path,0,true,7014,45,1566,false,,,,

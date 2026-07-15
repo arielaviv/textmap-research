@@ -470,6 +470,35 @@ turns 5 = the complete pipeline P on the same 20 maps.** Prediction:
 hallucination bounce-backs). Token cost ≈ 10× baseline — the accuracy/cost
 frontier IS the finding.
 
+## Routed pipeline validation — pre-registered 2026-07-16, BEFORE the run
+
+Screening discovery: scan TRANSFORMS coverage (20→95) and containment
+(75→95) but DESTROYS path (90→15) and dents on-street (85→75) — its spatial
+extraction overrides the read-serves=-don't-trace rule. One pipeline cannot
+win both; ROUTE by question type (legitimate: keyed on the question, known
+at ask time — OptiMind routes by problem class identically).
+
+Routing: HSCZ for containment/crossing/coverage/nearest/line-intersection/
+mixed (8 questions); H-only for path/on-street (2 questions). Screening
+composite (same-maps, selection-biased): 65.0. **Validation on FRESH seeds
+2000-2019 (never used anywhere). Prediction: composite 58-63** (regression
+toward the mean expected; anything ≥58 confirms routing beats every single
+recipe; ≥61.5 beats haiku's verdict ceiling). Cost ≈ $6.
+
+**RESULT (2026-07-16, results/routed-A + routed-B, fresh seeds, run once):**
+Run A 55.6% (n=160), Run B 85.0% (n=40) → **composite 61.5% — prediction
+band HIT (58-63), equals haiku's verdict ceiling (61.5), +15.5 over the
+46.0 certified-slice baseline.** The routed pipeline is the final recipe:
+haiku + textmap + routed{hints+scan+cit+zoom | hints-only} reaches the
+accuracy of haiku WITH ANSWERS PRECOMPUTED — the pipeline recovers the
+entire extraction gap. Caveat for the paper: single-recipe numbers were
+measured on the screening seeds; a same-seeds HSCZ control on 2000-2019
+(~$5) would make the routed-vs-flat comparison map-identical (queued for
+the scale-up). Next pipeline idea (pre-registered before any test):
+category-aware scan — the scan prompt itself routes (topology questions
+extract serves=/cable links instead of spatial facts); predicted to lift
+path inside the scan stack toward its 85-90 hints-only level.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
