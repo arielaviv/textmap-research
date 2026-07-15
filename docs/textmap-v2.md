@@ -739,6 +739,31 @@ crossing ≥3/5, blockage stays ≥4/5. Kill: crossing ≤1/5 ⇒ per-cable ring
 marshaling exceeds haiku even un-truncated; tools arm ships for
 single-segment questions only (blockage-class), reported as partial.**
 
+**PROBE 4 RESULT (results/tools-probe4): blockage 5/5, crossing 3/5 — BOTH
+bands hit. The executor arm is validated at probe scale.** The probe
+series in one line each: (1) no geometry in legend → model invents rings,
+under-detection; (2) bboxes → 2-3× fat on a 29°-rotated grid,
+over-detection, killed; (3) exact rings → blockage PERFECT, crossing
+truncated at 1500 tokens + cell/meter frame mixing; (4) own tool budget +
+meter cable endpoints → both land. Residual crossing misses are
+terminal-building exclusion judgment (the tool correctly reports a drop
+intersecting its own target; the model must exclude it and doesn't always)
+— semantics, not geometry. Four probes, ~$4, every step mechanistically
+diagnosed before the next was designed.
+
+**Full tools validation — pre-registered, runs AFTER the scale-up chain:**
+haiku, CAT + tools + rings (v2.8), ALL 10 questions, fresh seeds
+2000-2019. n budget-adaptive, decided by gateway balance at launch (a
+sample-size rule, not outcome-contingent): balance ≥$8 → n=20 (~$7);
+else n=15 (~$5). Where tools should act: blockage (rings), crossing
+(rings), enclosure (convex_hull on legend centroids); road_misplacement/
+onstreet already carry d_street= (no tool needed); path is legend-reading.
+**Predictions: composite 70-77 (vs CAT 59.5); blockage ≥80; crossing
+50-70; kill: composite <65 ⇒ tools don't transfer beyond the probed
+categories, reported as such.** If it lands, the paper's pipeline story
+becomes: reading protocol closes the extraction gap (46→59.5 = verdict
+ceiling), the executor breaks it (59.5 → ~75), each mechanism labeled.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
