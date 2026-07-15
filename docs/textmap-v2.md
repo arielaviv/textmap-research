@@ -669,6 +669,29 @@ both ⇒ haiku cannot drive function-args tools; the 80-90 path dies and we
 say so.** Full validation (fresh seeds 2000-2019, all 10 questions, vs CAT
 59.5) only if the probe fires, ~$6, after the scale-up chain completes.
 
+**PROBE 1 RESULT (results/tools-probe): crossing 3/5 — band hit; blockage
+1/5 — MISSED. Kill not triggered.** The toolsText audit shows the executor
+worked perfectly and the failure is upstream — input starvation: the
+textmap legend carries centroids but NO footprint geometry, so the model
+INVENTED rings for the tool (4×4m boxes around labels; single-point rings
+correctly rejected as errors; degenerate same-point-×4 rings passing
+validation but useless). The tool computed honestly on fabricated inputs.
+The asymmetry predicted in the design note is real: function-args tools
+need the representation to CARRY the geometry the question consumes.
+
+**v2.7 (labeled artifact revision, gated `--extents`): building footprint
+bounding boxes in the legend** — `ext=x39..45 y36..48`, exact meters, same
+frame as x=/y=. A world fact, question-agnostic, ~15 tokens/building. NOT
+full rings (token cost); bbox ≈ footprint for city buildings at our scale.
+All prior runs untouched (flag off by default).
+
+**Probe 2 — same design, seeds 9700+, CAT+tools+extents. Predictions:
+blockage ≥3/5 (the model now passes exact bboxes instead of invented
+rings); crossing ≥3/5 (cable endpoints from legend x/y + building bboxes).
+Kill: blockage still ≤1/5 ⇒ bboxes insufficient (real footprints too
+non-rectangular or the model can't marshal them) — the tools arm ships
+with crossing only, or dies.**
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

@@ -390,7 +390,7 @@ function cableGlyph(dc: number, dr: number): string {
 
 export function toTextMapV2(
   scene: Scene,
-  opts: { protocol?: boolean; zoom?: number } = {},
+  opts: { protocol?: boolean; zoom?: number; extents?: boolean } = {},
 ): string {
   // protocol=false strips the READING-PROTOCOL lines (cross-reference rule,
   // worked example, geometry-vs-topology, thresholds) while keeping every DATA
@@ -398,8 +398,13 @@ export function toTextMapV2(
   // that isolates "representation = format + protocol".
   // zoom>1 (v2.6, labeled artifact revision) scales grid resolution — smaller
   // cells reduce raster over-approximation (crossing/touches) at a token cost.
+  // extents (v2.7, labeled artifact revision) adds each building's exact
+  // footprint bounding box in meters to its legend row — a world fact,
+  // question-agnostic, feeding the geometry-tools executor exact inputs (the
+  // tools probe showed models invent ~4m rings when the legend has none).
   const protocol = opts.protocol !== false;
   const zoom = Math.max(1, Math.min(opts.zoom ?? 1, 2));
+  const extents = opts.extents === true;
   const { minLng, minLat, maxLng, maxLat } = scene.bounds;
   const widthM = Math.max(1, haversineMeters([minLng, minLat], [maxLng, minLat]));
   const heightM = Math.max(1, haversineMeters([minLng, minLat], [minLng, maxLat]));
@@ -653,7 +658,12 @@ export function toTextMapV2(
     "LEGEND  (id · marker · cell(col,row) · meters(x,y from SW) · detail; " +
       "inside= names the building whose footprint contains the entity's EXACT position " +
       "(none = outside every footprint); d_street= is the exact distance in meters to the " +
-      "nearest street centerline; buildings carry d_closure= — exact distance to the nearest closure)",
+      "nearest street centerline; buildings carry d_closure= — exact distance to the nearest closure" +
+      (extents
+        ? "; ext= is the building's exact footprint bounding box in meters, same frame as x=/y= " +
+          "— for geometric computations use ext=, never grid cells"
+        : "") +
+      ")",
   );
   for (const e of scene.equipment) {
     const [col, row] = toCell(e.position);
@@ -699,8 +709,16 @@ export function toTextMapV2(
       if (d < dClosure) dClosure = d;
     }
     const dc = Number.isFinite(dClosure) ? ` d_closure=${dClosure.toFixed(1)}m` : "";
+    // v2.7: exact footprint bounding box in the same meter frame as x=/y= —
+    // the geometry a tool call needs, without full-ring token cost.
+    let ext = "";
+    if (extents && b.footprint.length >= 3) {
+      const xs = b.footprint.map(xM);
+      const ys = b.footprint.map(yM);
+      ext = ` ext=x${Math.min(...xs)}..${Math.max(...xs)} y${Math.min(...ys)}..${Math.max(...ys)}`;
+    }
     lines.push(
-      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}${dc}`,
+      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}${dc}${ext}`,
     );
   });
 

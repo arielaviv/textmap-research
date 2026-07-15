@@ -63,6 +63,9 @@ export interface EvalConfig {
    *  representation; pure math executes (never sees the scene) and results
    *  are appended to the answer call. See core/geo-tools.ts. */
   tools?: boolean;
+  /** v2.7 labeled artifact revision: building footprint bounding boxes
+   *  (`ext=` meters) in the textmap legend — exact inputs for the tools arm. */
+  extents?: boolean;
   /** Evidence citations: the answer must cite, per id, the representation line
    *  that justifies it. Grader ignores citations — the forcing function is the
    *  point (careful scanning, less hallucination). */
@@ -235,7 +238,10 @@ export async function runEval(
   const bundles = new Map<string, RepresentationBundle>();
   for (const scene of config.scenes) {
     scenes.set(scene.id, scene);
-    bundles.set(scene.id, await buildRepresentations(scene, { zoom: config.zoom }));
+    bundles.set(
+      scene.id,
+      await buildRepresentations(scene, { zoom: config.zoom, extents: config.extents }),
+    );
   }
 
   // Prompts are per (scene, arm) — record each once so the run log can cite them
