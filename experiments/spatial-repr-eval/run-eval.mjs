@@ -17,6 +17,12 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Agent, setGlobalDispatcher } from "undici";
+
+// Long runs (slow vendor models × hundreds of calls) exceed undici's default
+// 300s response-headers timeout — the server keeps running (and billing) with
+// no one left to collect the results. Disable the ceiling for this driver.
+setGlobalDispatcher(new Agent({ headersTimeout: 0, bodyTimeout: 0 }));
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
