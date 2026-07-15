@@ -338,6 +338,49 @@ protocol-following itself is model-dependent** (per-model protocol
 calibration = future work). The bottleneck result is now cross-vendor: raw
 GeoJSON reading sits at 30–38.5% for EVERY model tested (7 models, 4 labs).
 
+## GeoFM Task-1 external validation — pre-registered 2026-07-15, BEFORE first run
+
+Replicating GeoFM (arXiv 2505.17136) Task 1 on THEIR data: their 1,400-triplet
+test split (recovered from their published task1_results_all.csv; their GPT-4
+zero-shot 0.628 / few-shot 0.661 / GPT-3.5 zero-shot 0.369 reproduce exactly
+from their per-item outputs), their verbatim zero-shot prompt, their
+normalization and full-triple grading. One variable: WKT strings vs the same
+two geometries drawn as two aligned grid layers (grid + GRID REF only — NO
+measurements anywhere; a distance would leak the DE-9IM answer).
+
+**Predictions (falsifiable, before the run):**
+1. textmap > wkt overall on haiku (the grid makes within/contains/overlaps
+   VISIBLE; WKT demands vertex arithmetic haiku can't do).
+2. Per predicate: textmap large win on within/contains/overlaps/disjoint
+   (containment gestalt); textmap WEAK on touches vs crosses disambiguation
+   (boundary-vs-interior at 44×26 cell resolution — our known raster
+   limitation) and on equals (their manufactured equals pairs interpolate
+   extra vertices; these rasterize IDENTICALLY, so grid-equals should be
+   readable — but so is coordinate comparison; predict small textmap win).
+3. Both arms likely below their GPT-4 numbers (haiku ≪ GPT-4); the claim
+   under test is the REPRESENTATION delta on an external benchmark, not
+   beating GPT-4.
+4. Kill criterion: wkt ≥ textmap overall ⇒ report as-is; the textmap's
+   scene-reading advantage does not extend to bare geometry-pair topology,
+   and the paper's external-validation section says so.
+
+**RESULT (2026-07-15, results/geofm-task1, run once, no iteration):**
+wkt 58.9% vs textmap 56.6% — **kill criterion INVOKED**: on bare pair
+topology the textmap does NOT beat raw WKT overall. Per-predicate (vs
+predictions): textmap DOMINATES disjoint **97 vs 76** and equals **92 vs 81**
+(gestalt-visible topology — predicted for disjoint, predicted small for
+equals); COLLAPSES on contains **18 vs 59** (prediction WRONG — collinear
+LineString containment rasterizes container and contained onto the same
+cells; sub-cell precision is exactly what pair topology needs); touches
+34 vs 42 and crosses 22 vs 25 weak both arms (predicted). Prediction 1
+(textmap > wkt overall) FALSIFIED; predictions 2 partially right, 3 right,
+4 honored. Paper framing: **the textmap is a scene-reading representation;
+its advantage does not extend to pair-level geometric decisions at raster
+resolution — this defines the method's boundary**, with two notable
+inversions (disjoint/equals) where topology IS gestalt-visible. Side
+finding: haiku-2026 + raw WKT (58.9) ≈ GPT-4-2024 zero-shot (62.8) on
+their benchmark. Cost $7.59, zero errors, 2,800 calls.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
