@@ -42,10 +42,46 @@ export const MODELS: ModelInfo[] = [
     alwaysThinking: true,
     maxTokens: 16000,
   },
+  // Anthropic via the gateway (same models, billed to Vercel credits instead
+  // of the Anthropic account — used when the Anthropic balance is empty).
+  { id: "anthropic/claude-haiku-4.5", label: "haiku-4.5 (gw)", provider: "gateway", vision: true },
+  {
+    id: "anthropic/claude-sonnet-4.6",
+    label: "sonnet-4.6 (gw)",
+    provider: "gateway",
+    vision: true,
+  },
+  // Cross-vendor points (ids verified against gateway /v1/models).
   { id: "openai/gpt-4o", label: "gpt-4o", provider: "gateway", vision: true },
   { id: "openai/gpt-4o-mini", label: "gpt-4o-mini", provider: "gateway", vision: true },
+  // gpt-5 is a reasoning model: rejects temperature, thinks inside the output
+  // budget — same handling as fable.
+  {
+    id: "openai/gpt-5",
+    label: "gpt-5",
+    provider: "gateway",
+    vision: true,
+    acceptsTemperature: false,
+    maxTokens: 16000,
+  },
+  {
+    id: "openai/gpt-5-mini",
+    label: "gpt-5-mini",
+    provider: "gateway",
+    vision: true,
+    acceptsTemperature: false,
+    maxTokens: 16000,
+  },
   { id: "google/gemini-2.5-flash", label: "gemini-2.5-flash", provider: "gateway", vision: true },
   { id: "google/gemini-2.5-pro", label: "gemini-2.5-pro", provider: "gateway", vision: true },
+  {
+    id: "xai/grok-4.1-fast-non-reasoning",
+    label: "grok-4.1-fast",
+    provider: "gateway",
+    vision: false,
+  },
+  { id: "deepseek/deepseek-v3.2", label: "deepseek-v3.2", provider: "gateway", vision: false },
+  { id: "alibaba/qwen-3-235b", label: "qwen-3-235b", provider: "gateway", vision: false },
   { id: "moonshotai/kimi-k2", label: "kimi-k2", provider: "gateway", vision: false },
   { id: "deepseek/deepseek-chat", label: "deepseek-chat", provider: "gateway", vision: false },
 ];
