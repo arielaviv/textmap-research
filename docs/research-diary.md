@@ -117,7 +117,7 @@ flight).
 | Probes/iteration (unlogged small runs) | — | ~$2 |
 | **Anthropic subtotal** | | **≈ $70** |
 
-**Vercel AI Gateway (credited $91.00 total: $64.73 + $26.27 top-ups):**
+**Vercel AI Gateway (credited $191.00 total: $64.73 + $26.27 + $50 + $50):**
 
 | What | Cost |
 |---|---|
@@ -133,9 +133,15 @@ flight).
 | GeoFM external (2,800) | $7.6 |
 | Smokes/probes | ~$0.4 |
 | **Used through 2026-07-15** | **$65.26 (exact, per gateway)** |
-| Booster screening 8 conditions (2026-07-16, in flight) | ~$18–20 est |
+| Booster screening 8 conditions + few-shot addendum (2026-07-16) | ~$25 |
+| P-full screen (HSCZ + votes 5 + turns 5) | ~$25 (vs $15 est — voting×turns×scan multiply; miss logged) |
+| Routed validation Run A (HSCZ, 8 cats) + Run B (H-only, 2 cats), fresh seeds | ~$6 |
+| Category-scan smokes (4 items, incl. the 3¢ that caught the CO-drop bug) | ~$0.15 |
+| **Used through 2026-07-16 (pre cat-scan validation)** | **$138.49 (exact, per gateway /credits)** |
+| Cat-scan validation CTL+CAT, fresh seeds (in flight) | ~$6 est |
 
-**Project total to date: ≈ $135 spent + $25.74 gateway balance in play.**
+**Project total to date: ≈ $208.50 spent ($70 Anthropic + $138.49 gateway) +
+$52.51 gateway balance in play.**
 (Figure excludes Claude Code development time — subscription, not API.)
 
 ## 2026-07-16 — Booster screening ($25 + $50 top-ups)
@@ -174,6 +180,62 @@ driver mid-run, server billed headless ~$1-2 until killed; refired with the
 proven pattern. Final screen in flight: HSCZ + votes 5 + turns 5
 (complete P), predicted 58-61.
 
+## 2026-07-16 — P-full result, routing discovery, routed validation
+
+**P-full (HSCZ + votes 5 + turns 5): 53.0 — BELOW HSCZ's 56.0 at ~10× the
+cost. Prediction 58-61 MISSED (3rd miss, published).** Voting and turns
+REGRESS on this task: haiku's reading errors are systematic, not noisy
+(majority voting amplifies the modal error), and the verifier has no
+executor to generate real feedback (OptiMind's loop closes through a
+solver; ours can only check id existence). Both dropped. The OptiMind
+transplant boundary, measured: representation-native mechanisms (hints,
+scan) transfer; executor-dependent ones (voting, turns) don't.
+
+**Routing discovery:** per-category screening surfaced that scan TRANSFORMS
+coverage (20→95) and containment (75→95) but DESTROYS path (90→15) and
+dents on-street (85→75). One recipe cannot win both → route by question
+category (legitimate: keyed on the question, known at ask time; OptiMind
+routes by problem class identically). Recipe: HSCZ for 8 categories,
+hints-only for path/on-street.
+
+**Routed validation on FRESH seeds 2000-2019 (never used anywhere;
+prediction 58-63 committed before the run): Run A HSCZ 55.6 (n=160) + Run B
+H-only 85.0 (n=40) → composite 61.5. Band HIT. Equals haiku's verdict
+ceiling (61.5) — the pipeline recovers the ENTIRE extraction gap. +15.5
+over the 46.0 certified baseline.** Caveat logged: single-recipe comparison
+numbers came from screening seeds; same-seed control queued.
+
+## 2026-07-16 — Category-aware scan (pipeline v2)
+
+Next idea, pre-registered before any call: instead of routing AROUND scan
+for path/on-street, the scan's extraction brief routes BY category (path →
+connectivity graph; on-street → street-placement facts), so ONE recipe
+covers all 10 questions. Implemented behind `--scan-targets` (generic scan
+stays runnable as the control); templates quoted verbatim in the notebook.
+
+Incident 6 (cheapest yet, $0.03): the 1-item smoke answered `["CL-A"]` vs
+truth `["CL-A","CO-1"]` — the first-draft brief said "extract serves lists
++ cable endpoints" and the CO serves nothing, so the extraction DROPPED the
+source and the answer anchored on a CO-less graph. Template revised (keep
+every entry incl. roots) BEFORE validation; smoke seeds 9500+ disjoint from
+validation seeds. Also added: per-item `scanText` in runlog.jsonl — the
+record now shows exactly what each answer anchored on.
+
+Re-smoke 2/3; the miss is PRINCIPLED: extraction perfect, model refused to
+place CO-1 on the path because no stated link connects closures to the CO,
+and flagged missingInfo — it is right about the stated facts; the oracle's
+truth encodes an unstated homing convention. Not patched via prompt (that
+would inject the oracle's rule); deferred as v2.7 `feeds=` field on the
+source row (world fact, question-agnostic). Paper note: the pipeline makes
+the model MORE faithful to stated facts — faithful enough to expose
+benchmark truths resting on unstated conventions.
+
+Validation fired (fresh seeds 2000-2019, ~$6): CTL = HSCZ generic on
+topology+onstreet (same-seed head-to-head for the 2 changed categories);
+CAT = HSCZ+targets on all 10 (its 8 untouched categories double as a free
+same-seed replicate of Run A). Decision rule pre-registered: scale-up
+recipe = CAT if composite ≥ 59.5, else routed.
+
 ## Standing integrity rules (accumulated)
 
 1. Predictions pre-registered in textmap-v2.md BEFORE every run; kill
@@ -187,9 +249,13 @@ proven pattern. Final screen in flight: HSCZ + votes 5 + turns 5
    the collector dies (billing continues headless).
 7. Every run's full prompts+answers in runlog.jsonl, committed.
 
-## Queued (awaiting ~$200 top-up; designs ready)
+## Queued (balance $52.51; designs ready)
 
-Hints with/without × all 10 models (incl. Kimi baseline) ~$85 · voting K=5
-+ self-correction turns (3 models) ~$67 · hints on hold-out/London +
-vocab-invariance probe + GeoFM+hints (boundary flip test) ~$28. Then: paper
-build (Task 18), SFT paper-2 (Qwen3-8B LoRA, ~$60, separate).
+All-model scale-up with the winning recipe (cat-scan or routed) vs
+baseline: gemini, deepseek, grok, qwen (protocol-refuser test), kimi (needs
+baseline too), gpt-5-mini, sonnet — 20 maps each ~$32 · GeoFM rerun with
+the direction-rule hint (boundary flip test) ~$8 · already-covered
+same-seed control folded into the cat-scan validation. Voting/turns and
+few-shot DROPPED after screening (negative results, kept in the record).
+Then: paper build (Task 18), SFT paper-2 (Qwen3-8B LoRA on Together,
+hints+scan traces baked into training, ~$20-45, separate budget).

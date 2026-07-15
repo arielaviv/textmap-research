@@ -551,6 +551,22 @@ seeds — if it does NOT, the routing/cat-scan justification weakens and we say
 so). **Decision rule:** the scale-up recipe = CAT if its composite ≥ routed
 61.5 − 2pts (one pipeline beats two on simplicity); else routed. Cost ≈ $6.
 
+**Smoke observation (seeds 9500-9502, pre-validation, disjoint):** 2/3 after
+the template revision. The miss is principled, not sloppy: the extraction was
+complete and correct (CO-1 listed with role "source"), and the model then
+REFUSED to put CO-1 on the path because no cable or serves link connects any
+closure to the CO — flagging `missingInfo` — and it is right about the stated
+facts. The scene model's ground truth (`pathToSource` = serving closure, then
+CO) encodes a homing convention the representation never states; hints-only
+scores 85-90 because the model's default assumption happens to match it. The
+explicit connectivity graph makes the model MORE faithful to stated facts and
+thereby surfaces the under-specification. We do NOT patch this via prompt
+("assume closures home to the source" would inject the oracle's rule); the
+clean fix is representational — a `feeds=`/upstream field on the source row, a
+world fact, question-agnostic — deferred as a v2.7 labeled revision. For the
+paper: an engineered-representation pipeline can expose benchmark truths that
+rest on unstated conventions.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

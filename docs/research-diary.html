@@ -33,7 +33,7 @@ registry incl. gateway vendors, eval-route auth, batch driver
 <h2>2026-07-08/09 — Overnight program ($50 cap; Anthropic account)</h2>
 <p>Iteration by probe($0.1) → validate($3–5) → certify($10) with pre-registered
 predictions per change (full trail: textmap-v2.md).</p>
-<table>
+<div class="scroll"><table>
 <thead>
 <tr>
 <th>Run</th>
@@ -86,7 +86,7 @@ predictions per change (full trail: textmap-v2.md).</p>
 <td>−47% tokens at 2800m</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>Anthropic spend total (whole project, measured from logs): <strong>$67.73</strong> + ~$2
 probes ≈ <strong>$70</strong>. Balance ≈ $0 after the opus run.</p>
 <p><strong>Bottleneck finding:</strong> GeoJSON accuracy FLAT across tiers (38.7 → 38.5 →
@@ -107,7 +107,7 @@ flatness.</p>
 OK. <strong>Incident 1:</strong> first WKT+image 60-map run — 1,190/1,200 calls 429
 "free tier": account had no PAID credits. $0 lost (failed calls unbilled).
 User topped up.</p>
-<table>
+<div class="scroll"><table>
 <thead>
 <tr>
 <th>#</th>
@@ -182,7 +182,7 @@ User topped up.</p>
 <td>~$3</td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p><strong>Account exhausted to the cent:</strong> balance −$0.26 after run 7 (last 25 gemini
 calls bounced on 402 credit-required — excluded, run 375/400 complete).
 <strong>The experimental program (tiers 1+2 + external validation) is COMPLETE.</strong>
@@ -206,7 +206,7 @@ hints → measured lift).</p>
 flight).</p>
 <h2>Money ledger — ALL LLM spend (updated per run)</h2>
 <p><strong>Anthropic API (direct; account drained ~Jul 9):</strong></p>
-<table>
+<div class="scroll"><table>
 <thead>
 <tr>
 <th>What</th>
@@ -241,9 +241,9 @@ flight).</p>
 <td><strong>≈ $70</strong></td>
 </tr>
 </tbody>
-</table>
-<p><strong>Vercel AI Gateway (credited $91.00 total: $64.73 + $26.27 top-ups):</strong></p>
-<table>
+</table></div>
+<p><strong>Vercel AI Gateway (credited $191.00 total: $64.73 + $26.27 + $50 + $50):</strong></p>
+<div class="scroll"><table>
 <thead>
 <tr>
 <th>What</th>
@@ -300,19 +300,40 @@ flight).</p>
 <td><strong>$65.26 (exact, per gateway)</strong></td>
 </tr>
 <tr>
-<td>Booster screening 8 conditions (2026-07-16, in flight)</td>
-<td>~$18–20 est</td>
+<td>Booster screening 8 conditions + few-shot addendum (2026-07-16)</td>
+<td>~$25</td>
+</tr>
+<tr>
+<td>P-full screen (HSCZ + votes 5 + turns 5)</td>
+<td>~$25 (vs $15 est — voting×turns×scan multiply; miss logged)</td>
+</tr>
+<tr>
+<td>Routed validation Run A (HSCZ, 8 cats) + Run B (H-only, 2 cats), fresh seeds</td>
+<td>~$6</td>
+</tr>
+<tr>
+<td>Category-scan smokes (4 items, incl. the 3¢ that caught the CO-drop bug)</td>
+<td>~$0.15</td>
+</tr>
+<tr>
+<td><strong>Used through 2026-07-16 (pre cat-scan validation)</strong></td>
+<td><strong>$138.49 (exact, per gateway /credits)</strong></td>
+</tr>
+<tr>
+<td>Cat-scan validation CTL+CAT, fresh seeds (in flight)</td>
+<td>~$6 est</td>
 </tr>
 </tbody>
-</table>
-<p><strong>Project total to date: ≈ $135 spent + $25.74 gateway balance in play.</strong>
+</table></div>
+<p><strong>Project total to date: ≈ $208.50 spent ($70 Anthropic + $138.49 gateway) +
+$52.51 gateway balance in play.</strong>
 (Figure excludes Claude Code development time — subscription, not API.)</p>
 <h2>2026-07-16 — Booster screening ($25 + $50 top-ups)</h2>
 <p>Pipeline built (hints / voting / turns / scan / citations / zoom / few-shot),
 typechecked, pushed. 8-condition screen + few-shot addendum + full-P screen,
 all: 20 NYC maps (seeds 1000-1019, pairs with certified baseline), haiku,
 textmap2 arm, n=200 each.</p>
-<table>
+<div class="scroll"><table>
 <thead>
 <tr>
 <th>Condition</th>
@@ -377,7 +398,7 @@ textmap2 arm, n=200 each.</p>
 <td><strong>+10.0 — best</strong></td>
 </tr>
 </tbody>
-</table>
+</table></div>
 <p>Marginals: <strong>scan +4.5 avg (positive in all 4 pairs — the extraction-gap
 thesis measured)</strong>; zoom +1.5 (mixed, +50% tokens); citations +0.3 (noise);
 few-shot DROPPED (interferes with scan — GeoFM's few-shot gain does not
@@ -391,6 +412,53 @@ placement ran a detached launch foreground → 2-min timeout killed the
 driver mid-run, server billed headless ~$1-2 until killed; refired with the
 proven pattern. Final screen in flight: HSCZ + votes 5 + turns 5
 (complete P), predicted 58-61.</p>
+<h2>2026-07-16 — P-full result, routing discovery, routed validation</h2>
+<p><strong>P-full (HSCZ + votes 5 + turns 5): 53.0 — BELOW HSCZ's 56.0 at ~10× the
+cost. Prediction 58-61 MISSED (3rd miss, published).</strong> Voting and turns
+REGRESS on this task: haiku's reading errors are systematic, not noisy
+(majority voting amplifies the modal error), and the verifier has no
+executor to generate real feedback (OptiMind's loop closes through a
+solver; ours can only check id existence). Both dropped. The OptiMind
+transplant boundary, measured: representation-native mechanisms (hints,
+scan) transfer; executor-dependent ones (voting, turns) don't.</p>
+<p><strong>Routing discovery:</strong> per-category screening surfaced that scan TRANSFORMS
+coverage (20→95) and containment (75→95) but DESTROYS path (90→15) and
+dents on-street (85→75). One recipe cannot win both → route by question
+category (legitimate: keyed on the question, known at ask time; OptiMind
+routes by problem class identically). Recipe: HSCZ for 8 categories,
+hints-only for path/on-street.</p>
+<p><strong>Routed validation on FRESH seeds 2000-2019 (never used anywhere;
+prediction 58-63 committed before the run): Run A HSCZ 55.6 (n=160) + Run B
+H-only 85.0 (n=40) → composite 61.5. Band HIT. Equals haiku's verdict
+ceiling (61.5) — the pipeline recovers the ENTIRE extraction gap. +15.5
+over the 46.0 certified baseline.</strong> Caveat logged: single-recipe comparison
+numbers came from screening seeds; same-seed control queued.</p>
+<h2>2026-07-16 — Category-aware scan (pipeline v2)</h2>
+<p>Next idea, pre-registered before any call: instead of routing AROUND scan
+for path/on-street, the scan's extraction brief routes BY category (path →
+connectivity graph; on-street → street-placement facts), so ONE recipe
+covers all 10 questions. Implemented behind <code>--scan-targets</code> (generic scan
+stays runnable as the control); templates quoted verbatim in the notebook.</p>
+<p>Incident 6 (cheapest yet, $0.03): the 1-item smoke answered <code>["CL-A"]</code> vs
+truth <code>["CL-A","CO-1"]</code> — the first-draft brief said "extract serves lists
++ cable endpoints" and the CO serves nothing, so the extraction DROPPED the
+source and the answer anchored on a CO-less graph. Template revised (keep
+every entry incl. roots) BEFORE validation; smoke seeds 9500+ disjoint from
+validation seeds. Also added: per-item <code>scanText</code> in runlog.jsonl — the
+record now shows exactly what each answer anchored on.</p>
+<p>Re-smoke 2/3; the miss is PRINCIPLED: extraction perfect, model refused to
+place CO-1 on the path because no stated link connects closures to the CO,
+and flagged missingInfo — it is right about the stated facts; the oracle's
+truth encodes an unstated homing convention. Not patched via prompt (that
+would inject the oracle's rule); deferred as v2.7 <code>feeds=</code> field on the
+source row (world fact, question-agnostic). Paper note: the pipeline makes
+the model MORE faithful to stated facts — faithful enough to expose
+benchmark truths resting on unstated conventions.</p>
+<p>Validation fired (fresh seeds 2000-2019, ~$6): CTL = HSCZ generic on
+topology+onstreet (same-seed head-to-head for the 2 changed categories);
+CAT = HSCZ+targets on all 10 (its 8 untouched categories double as a free
+same-seed replicate of Run A). Decision rule pre-registered: scale-up
+recipe = CAT if composite ≥ 59.5, else routed.</p>
 <h2>Standing integrity rules (accumulated)</h2>
 <ol>
 <li>Predictions pre-registered in textmap-v2.md BEFORE every run; kill
@@ -404,8 +472,12 @@ proven pattern. Final screen in flight: HSCZ + votes 5 + turns 5
    the collector dies (billing continues headless).</li>
 <li>Every run's full prompts+answers in runlog.jsonl, committed.</li>
 </ol>
-<h2>Queued (awaiting ~$200 top-up; designs ready)</h2>
-<p>Hints with/without × all 10 models (incl. Kimi baseline) ~$85 · voting K=5
-+ self-correction turns (3 models) ~$67 · hints on hold-out/London +
-vocab-invariance probe + GeoFM+hints (boundary flip test) ~$28. Then: paper
-build (Task 18), SFT paper-2 (Qwen3-8B LoRA, ~$60, separate).</p></div></body></html>
+<h2>Queued (balance $52.51; designs ready)</h2>
+<p>All-model scale-up with the winning recipe (cat-scan or routed) vs
+baseline: gemini, deepseek, grok, qwen (protocol-refuser test), kimi (needs
+baseline too), gpt-5-mini, sonnet — 20 maps each ~$32 · GeoFM rerun with
+the direction-rule hint (boundary flip test) ~$8 · already-covered
+same-seed control folded into the cat-scan validation. Voting/turns and
+few-shot DROPPED after screening (negative results, kept in the record).
+Then: paper build (Task 18), SFT paper-2 (Qwen3-8B LoRA on Together,
+hints+scan traces baked into training, ~$20-45, separate budget).</p></div></body></html>
