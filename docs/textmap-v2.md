@@ -718,6 +718,27 @@ building). Kill: blockage ≤1/5 with EXACT rings available ⇒ haiku cannot
 marshal ring-scale inputs through function-args; the tools arm is reported
 as a negative result for ring-questions at this model scale.**
 
+**PROBE 3 RESULT (results/tools-probe3): blockage 5/5 — from a 0/20
+baseline to PERFECT; the executor thesis lands (exact rings + pure math).
+Crossing 0/5, and the audit shows two stacked INPUT failures, both
+mechanical, neither about the executor: (1) every miss ends in
+"ERROR: invalid JSON" — the tool round ran on the 1500-token freeText
+budget and crossing needs ~one line per cable × full ring sets (~10× a
+blockage request) → truncation mid-JSON; (2) frame mixing — CABLES rows
+gave endpoints only as grid CELLS while rings are in meters, so the tool
+honestly computed on mixed frames.**
+
+Fixes, both disclosed: the tool round gets its own output budget
+(`maxTokensOverride: 6000` — scan and answer budgets untouched everywhere,
+so all prior comparisons stand), and v2.8 gains exact meter endpoints on
+CABLES rows (`m[52,61]->[43,68]` beside the cells — the revision was
+incomplete with buildings ringed but cables cell-only).
+
+**Probe 4 — same seeds, CAT+tools+rings with both fixes. Predictions:
+crossing ≥3/5, blockage stays ≥4/5. Kill: crossing ≤1/5 ⇒ per-cable ring
+marshaling exceeds haiku even un-truncated; tools arm ships for
+single-segment questions only (blockage-class), reported as partial.**
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

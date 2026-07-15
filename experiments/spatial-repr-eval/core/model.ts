@@ -19,6 +19,10 @@ export interface AskInput {
   /** Free-text mode: no forced tool — used by the scan phase (fact extraction).
    *  The reply lands in `rawText`; `answer` stays null. */
   freeText?: boolean;
+  /** Explicit output budget for THIS call only — the tools round needs more
+   *  than the scan default (ring marshaling truncated at 1500, probe 3)
+   *  without touching scan/answer budgets anywhere else. */
+  maxTokensOverride?: number;
 }
 
 export interface AskResult {
@@ -102,9 +106,11 @@ async function askAnthropic(input: AskInput): Promise<AskResult> {
       // 1024 would truncate before the tool call. Scan (freeText) calls get
       // their own budget — reasoning models need far more than 1500 there,
       // while answer-call budgets stay fixed for baseline pairing.
-      max_tokens: input.freeText
-        ? (info.scanMaxTokens ?? Math.max(1500, info.maxTokens ?? 0))
-        : (info.maxTokens ?? 1024),
+      max_tokens:
+        input.maxTokensOverride ??
+        (input.freeText
+          ? (info.scanMaxTokens ?? Math.max(1500, info.maxTokens ?? 0))
+          : (info.maxTokens ?? 1024)),
       // Opus 4.7+/Fable 5 reject sampling params with a 400 — omit temperature.
       ...(info.acceptsTemperature !== false ? { temperature: input.temperature } : {}),
       system: info.alwaysThinking
@@ -200,9 +206,11 @@ async function askGateway(input: AskInput): Promise<AskResult> {
         model: input.model,
         ...(info.acceptsTemperature !== false ? { temperature: input.temperature } : {}),
         // Scan (freeText) budget is separate — see the Anthropic path's note.
-        max_tokens: input.freeText
-          ? (info.scanMaxTokens ?? Math.max(1500, info.maxTokens ?? 0))
-          : (info.maxTokens ?? 1024),
+        max_tokens:
+          input.maxTokensOverride ??
+          (input.freeText
+            ? (info.scanMaxTokens ?? Math.max(1500, info.maxTokens ?? 0))
+            : (info.maxTokens ?? 1024)),
         messages: [
           { role: "system", content: SYSTEM },
           { role: "user", content: userContent },

@@ -759,12 +759,21 @@ export function toTextMapV2(
 
   if (scene.cables.length) {
     lines.push("");
-    lines.push("CABLES");
+    lines.push(
+      rings
+        ? "CABLES  (endpoints as cell(col,row) AND m[x,y] exact meters, same frame as x=/y= — use m[] for geometric computations)"
+        : "CABLES",
+    );
     for (const c of scene.cables) {
       const [a0, ar0] = toCell(c.path[0]);
       const [a1, ar1] = toCell(c.path[c.path.length - 1]);
+      // v2.8: exact meter endpoints beside the cells — rings without cable
+      // meters left the tool round mixing frames (probe 3).
+      const m = rings
+        ? `  m[${xM(c.path[0])},${yM(c.path[0])}]->[${xM(c.path[c.path.length - 1])},${yM(c.path[c.path.length - 1])}]`
+        : "";
       lines.push(
-        `  ${padRight(c.id, 14)} ${padRight(c.kind, 13)} ${c.sourceId} -> ${c.targetId}  (${a0},${ar0})->(${a1},${ar1})`,
+        `  ${padRight(c.id, 14)} ${padRight(c.kind, 13)} ${c.sourceId} -> ${c.targetId}  (${a0},${ar0})->(${a1},${ar1})${m}`,
       );
     }
   }

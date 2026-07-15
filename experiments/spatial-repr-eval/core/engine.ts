@@ -366,6 +366,9 @@ export async function runEval(
           GEO_TOOLS_SPEC +
           `\n\nQUESTION (for context only):\n${q.prompt(t.scene)}`,
         freeText: true,
+        // Ring marshaling can be ~10× a scan's output — its own budget, so
+        // scan/answer budgets stay untouched everywhere (probe 3 truncation).
+        maxTokensOverride: 6000,
       });
       inputTokens += toolRes.inputTokens;
       outputTokens += toolRes.outputTokens;
