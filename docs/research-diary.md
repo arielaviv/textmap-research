@@ -236,6 +236,32 @@ CAT = HSCZ+targets on all 10 (its 8 untouched categories double as a free
 same-seed replicate of Run A). Decision rule pre-registered: scale-up
 recipe = CAT if composite ≥ 59.5, else routed.
 
+**RESULT: CAT composite 59.5 (n=200) — exactly at the threshold, qualifies
+by the rule as written; CAT is the scale-up recipe.** Per category: path
+25→55 (CTL→CAT, paired same seeds; predicted 70-90 — miss #4, mechanism =
+the unstated closure→CO homing the smoke exposed), on-street 70→100
+(predicted 80-90 — above band, calibration miss), 8-cat slice 55.0
+replicating Run A's 55.6 on identical prompts+seeds. CTL confirmed the
+generic-scan path collapse on fresh seeds (25%, predicted <40). Also
+surfaced: line-intersection 0/20 in BOTH fresh-seed runs — compute-bound
+(mental raycasting), the executor-shaped hole again; negative result kept.
+Routed measured 2.0 pts higher (61.5); a post-hoc best-of-both recipe was
+explicitly NOT assembled (recipe-shopping).
+
+## 2026-07-16 — Cross-model scale-up + GeoFM hint rerun (in flight)
+
+Prereg committed (textmap-v2.md): CAT on 7 models paired with their plain
+textmap2 baselines at seed 1000 (deepseek 53.5, gemini-pro 54.5, grok
+47.5, gpt-5-mini 47.5, qwen 31.5, kimi TBD, sonnet 56.5); success = ≥6/7
+positive. Engineering fix first: free-text scan calls got a per-model
+budget (scanMaxTokens; reasoning models truncated extractions to nothing
+at 1500 — gpt-5-mini smoke returned 2.7k-char scans after the fix; haiku
+unchanged at 1500 so the validation stands). 7-model smoke 12/14, zero
+errors, all scans non-empty (~$0.5). GeoFM rerun: symmetric direction-rule
+bullets on both arms' system prompts (--hint), predictions committed
+(boundary flip expected). Chain of 9 runs fired sequential/detached,
+est ≈ $39 of $52.51 balance.
+
 ## Standing integrity rules (accumulated)
 
 1. Predictions pre-registered in textmap-v2.md BEFORE every run; kill
