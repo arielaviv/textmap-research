@@ -388,18 +388,27 @@ function cableGlyph(dc: number, dr: number): string {
   return dc * dr > 0 ? "\\" : "/";
 }
 
-export function toTextMapV2(scene: Scene, opts: { protocol?: boolean } = {}): string {
+export function toTextMapV2(
+  scene: Scene,
+  opts: { protocol?: boolean; zoom?: number } = {},
+): string {
   // protocol=false strips the READING-PROTOCOL lines (cross-reference rule,
   // worked example, geometry-vs-topology, thresholds) while keeping every DATA
   // element — grids, glyph keys, GRID REF, legend measurements. The ablation
   // that isolates "representation = format + protocol".
+  // zoom>1 (v2.6, labeled artifact revision) scales grid resolution — smaller
+  // cells reduce raster over-approximation (crossing/touches) at a token cost.
   const protocol = opts.protocol !== false;
+  const zoom = Math.max(1, Math.min(opts.zoom ?? 1, 2));
   const { minLng, minLat, maxLng, maxLat } = scene.bounds;
   const widthM = Math.max(1, haversineMeters([minLng, minLat], [maxLng, minLat]));
   const heightM = Math.max(1, haversineMeters([minLng, minLat], [minLng, maxLat]));
 
-  const gw = GRID_W;
-  const gh = Math.max(MIN_H, Math.min(MAX_H, Math.round((GRID_W * heightM) / widthM)));
+  const gw = Math.round(GRID_W * zoom);
+  const gh = Math.max(
+    MIN_H,
+    Math.min(Math.round(MAX_H * zoom), Math.round((gw * heightM) / widthM)),
+  );
   const cellW = (maxLng - minLng) / gw || 1;
   const cellH = (maxLat - minLat) / gh || 1;
   const mpcX = widthM / gw;

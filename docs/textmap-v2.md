@@ -417,6 +417,23 @@ textmap 55-65 (rivals frontier-on-geojson), SFT-8B json 38-45. Risk
 disclosed: SFT may partially close the format gap.
 Vocabulary probe DROPPED (user decision: closures stay).
 
+## Booster screening — pre-registered 2026-07-16, BEFORE the probe
+
+8 conditions on the same 20 scenes (seed 1000), haiku, textmap2 arm,
+hints as base + power set of {Scan, Citations, Zoom×1.5}. 20-map textmap2
+baseline (no hints) = 46.0. Predictions:
+- H alone: 52 (±3) — coverage + crossing hints carry it
+- H+S: +3..5 over H (self-built verdict layer; the extraction-gap thesis)
+- H+C: +1..2 over H; main effect = hallucination ↓
+- H+Z: +1..3 (crossing/blockage only; tokens +~50% — the cost is the story)
+- Combos ≈ additive minus overlap; H+SCZ ≈ 58-62
+- Selection rule (BINDING): a booster survives to the $200 program iff its
+  marginal gain ≥ +3 points in at least one combination; survivors join P.
+- Scan asymmetry check: winner condition re-run on json arm — predicted
+  near-zero gain there (extraction ≠ computation).
+Zoom is v2.6 — a LABELED artifact revision, reported separately from the
+frozen v2.5 baseline. Cost ≈ $20 of the $25 charge.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

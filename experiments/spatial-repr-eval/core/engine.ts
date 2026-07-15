@@ -52,6 +52,13 @@ export interface EvalConfig {
    *  Turns the verdict-ceiling insight into an inference strategy — the model
    *  builds its own verdict layer. No scene facts are injected. */
   scan?: boolean;
+  /** Evidence citations: the answer must cite, per id, the representation line
+   *  that justifies it. Grader ignores citations — the forcing function is the
+   *  point (careful scanning, less hallucination). */
+  citations?: boolean;
+  /** Grid resolution multiplier [1,2] for textmap arms — v2.6, a LABELED
+   *  artifact revision (smaller cells vs more tokens), not an inference trick. */
+  zoom?: number;
 }
 
 /** Questions filtered by id OR category. No filter = the frozen 10-question
@@ -185,7 +192,7 @@ export async function runEval(
   const bundles = new Map<string, RepresentationBundle>();
   for (const scene of config.scenes) {
     scenes.set(scene.id, scene);
-    bundles.set(scene.id, await buildRepresentations(scene));
+    bundles.set(scene.id, await buildRepresentations(scene, { zoom: config.zoom }));
   }
 
   // Prompts are per (scene, arm) — record each once so the run log can cite them
@@ -233,6 +240,11 @@ export async function runEval(
     const q = activeQuestions[t.qIndex];
     const rep = compose(t.arm, bundles.get(t.scene.id)!, config.isolate);
     let baseQuestion = q.prompt(t.scene) + (config.hints ? hintFor(q.id, t.arm) : "");
+    if (config.citations) {
+      baseQuestion +=
+        "\nAlso fill `evidence`: for EVERY id in your answer, one string quoting the exact " +
+        "line/entry from the representation that justifies including it.";
+    }
 
     let scanTokensIn = 0;
     let scanTokensOut = 0;

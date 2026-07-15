@@ -293,14 +293,17 @@ export async function toMapImage(
 // Assemble all arms
 // ---------------------------------------------------------------------------
 
-export async function buildRepresentations(scene: Scene): Promise<RepresentationBundle> {
+export async function buildRepresentations(
+  scene: Scene,
+  opts: { zoom?: number } = {},
+): Promise<RepresentationBundle> {
   const image = await toMapImage(scene);
   return {
     json: toJSON(scene),
     ascii: toAscii(scene),
     textmap: toTextMap(scene),
-    textmap2: toTextMapV2(scene),
-    textmap2np: toTextMapV2(scene, { protocol: false }),
+    textmap2: toTextMapV2(scene, { zoom: opts.zoom }),
+    textmap2np: toTextMapV2(scene, { protocol: false, zoom: opts.zoom }),
     wkt: toWKT(scene),
     verdict: toVerdict(scene),
     image,

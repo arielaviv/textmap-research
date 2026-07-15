@@ -60,6 +60,9 @@ export interface Answer {
   direction?: string;
   /** 'NE' | 'NW' | 'SE' | 'SW' (hold-out quadrant question). */
   quadrant?: string;
+  /** Citation strings (one per cited id) when the citations condition is on.
+   *  Ignored by every grader — the forcing function is the point. */
+  evidence?: string[];
   /** The model's report that the representation lacks needed information. The
    *  forced tool call means it can't literally ask — this field records the ask. */
   missingInfo?: string;
@@ -78,6 +81,13 @@ export const ANSWER_TOOL_SCHEMA = {
     count: { type: "number", description: "numeric answer, when the question asks for a count" },
     direction: { type: "string", description: "'north' or 'south', when asked" },
     quadrant: { type: "string", description: "'NE', 'NW', 'SE' or 'SW', when asked" },
+    evidence: {
+      type: "array",
+      items: { type: "string" },
+      description:
+        "ONLY when the question asks for evidence: per cited id, the exact line from the " +
+        "representation that justifies it.",
+    },
     missingInfo: {
       type: "string",
       description:

@@ -105,6 +105,39 @@ hints → measured lift).
 Vercel spend to date: ~$57 of $64.73 (balance $7.86 at 22:30, runs 6 in
 flight).
 
+## Money ledger — ALL LLM spend (updated per run)
+
+**Anthropic API (direct; account drained ~Jul 9):**
+
+| What | Tokens | Cost |
+|---|---|---|
+| All haiku runs (7 runs, 4,640 calls) | 37.1M in / 0.21M out | $38.15 |
+| Sonnet 4.6 matrix (400 calls) | 3.33M / 0.017M | $10.25 |
+| Opus 4.8 matrix (400 calls) | 3.77M / 0.019M | $19.33 |
+| Probes/iteration (unlogged small runs) | — | ~$2 |
+| **Anthropic subtotal** | | **≈ $70** |
+
+**Vercel AI Gateway (credited $91.00 total: $64.73 + $26.27 top-ups):**
+
+| What | Cost |
+|---|---|
+| Hold-out 60-map (720 calls) | $6.3 |
+| London certification (1,200) | $10.6 |
+| WKT+image 60-map (1,200) | $7.3 |
+| Vendor matrix ×4 (1,600) | $8.5 |
+| Incident: aborted vendor run (undici) | ~$5 |
+| GPT-5 probe (20 calls) | $1.3 |
+| Incident: GPT-5 killed run (billed headless) | ~$10–15 |
+| GPT-5-mini matrix (400) | ~$5.5 |
+| Gemini wkt+image (400) | ~$3 |
+| GeoFM external (2,800) | $7.6 |
+| Smokes/probes | ~$0.4 |
+| **Used through 2026-07-15** | **$65.26 (exact, per gateway)** |
+| Booster screening 8 conditions (2026-07-16, in flight) | ~$18–20 est |
+
+**Project total to date: ≈ $135 spent + $25.74 gateway balance in play.**
+(Figure excludes Claude Code development time — subscription, not API.)
+
 ## Standing integrity rules (accumulated)
 
 1. Predictions pre-registered in textmap-v2.md BEFORE every run; kill

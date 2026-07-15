@@ -63,6 +63,8 @@ const hints = process.argv.includes("--hints");
 const votes = Number(arg("votes", "1"));
 const turns = Number(arg("turns", "1"));
 const scan = process.argv.includes("--scan");
+const citations = process.argv.includes("--citations");
+const zoom = Number(arg("zoom", "1"));
 
 const outDir = arg("out", dirname(fileURLToPath(import.meta.url)));
 
@@ -102,6 +104,8 @@ async function main() {
       ...(votes > 1 ? { votes } : {}),
       ...(turns > 1 ? { turns } : {}),
       ...(scan ? { scan: true } : {}),
+      ...(citations ? { citations: true } : {}),
+      ...(zoom > 1 ? { zoom } : {}),
     }),
   });
   if (!resp.ok) {

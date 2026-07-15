@@ -67,6 +67,8 @@ interface RunBody {
   votes?: number; // majority voting K, clamped [1,5]
   turns?: number; // self-correction rounds, clamped [1,5]
   scan?: boolean; // two-phase scan-then-answer reading
+  citations?: boolean; // require per-id evidence quotes (grader ignores them)
+  zoom?: number; // textmap grid resolution multiplier [1,2] (v2.6, labeled)
 }
 
 const ROTATE: Plant[] = [
@@ -151,6 +153,8 @@ export async function POST(req: Request) {
     votes,
     turns,
     scan: body.scan ?? false,
+    citations: body.citations ?? false,
+    zoom: body.zoom,
   };
   const { items, prompts, questions } = await runEval(config);
   return NextResponse.json({
