@@ -67,6 +67,7 @@ interface RunBody {
   votes?: number; // majority voting K, clamped [1,5]
   turns?: number; // self-correction rounds, clamped [1,5]
   scan?: boolean; // two-phase scan-then-answer reading
+  scanTargets?: boolean; // category-aware extraction briefs for path/on-street (with scan)
   citations?: boolean; // require per-id evidence quotes (grader ignores them)
   zoom?: number; // textmap grid resolution multiplier [1,2] (v2.6, labeled)
   fewshot?: boolean; // prepend a mini worked example in the arm's format
@@ -154,6 +155,7 @@ export async function POST(req: Request) {
     votes,
     turns,
     scan: body.scan ?? false,
+    scanTargets: body.scanTargets ?? false,
     citations: body.citations ?? false,
     zoom: body.zoom,
     fewshot: body.fewshot ?? false,
@@ -175,6 +177,11 @@ export async function POST(req: Request) {
       hints: body.hints ?? false,
       votes,
       turns,
+      scan: body.scan ?? false,
+      scanTargets: body.scanTargets ?? false,
+      citations: body.citations ?? false,
+      zoom: body.zoom ?? 1,
+      fewshot: body.fewshot ?? false,
       totalCalls,
     },
     aggregate: aggregate(items),

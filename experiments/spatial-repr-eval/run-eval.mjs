@@ -63,6 +63,7 @@ const hints = process.argv.includes("--hints");
 const votes = Number(arg("votes", "1"));
 const turns = Number(arg("turns", "1"));
 const scan = process.argv.includes("--scan");
+const scanTargets = process.argv.includes("--scan-targets");
 const citations = process.argv.includes("--citations");
 const zoom = Number(arg("zoom", "1"));
 const fewshot = process.argv.includes("--fewshot");
@@ -105,6 +106,7 @@ async function main() {
       ...(votes > 1 ? { votes } : {}),
       ...(turns > 1 ? { turns } : {}),
       ...(scan ? { scan: true } : {}),
+      ...(scanTargets ? { scanTargets: true } : {}),
       ...(citations ? { citations: true } : {}),
       ...(zoom > 1 ? { zoom } : {}),
       ...(fewshot ? { fewshot: true } : {}),

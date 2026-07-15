@@ -499,6 +499,46 @@ category-aware scan — the scan prompt itself routes (topology questions
 extract serves=/cable links instead of spatial facts); predicted to lift
 path inside the scan stack toward its 85-90 hints-only level.
 
+## Category-aware scan validation — pre-registered 2026-07-16, BEFORE the run
+
+Implements the idea pre-registered above: instead of ROUTING around scan for
+path/on-street, the scan's extraction brief itself becomes category-aware, so
+ONE recipe covers all 10 questions. Gated behind `--scan-targets` (the generic
+scan stays runnable as a control). Exact templates (engine.ts `SCAN_TARGETS`),
+quoted verbatim so the record predates the run:
+
+- **path**: "extract the CONNECTIVITY GRAPH only: one line per equipment entry
+  with its exact id and the full list of building/equipment ids it serves,
+  exactly as written; one line per cable with its exact id and its two
+  endpoints (source → target). Do NOT extract positions, distances or streets —
+  this question is answered purely by connectivity."
+- **on-street**: "extract the STREET-PLACEMENT facts only: one line per
+  equipment entry with its exact id and every fact the representation states
+  about its position relative to streets (the street it sits on, its distance
+  to the nearest street, or its coordinates if that is all the representation
+  provides). Do NOT extract serves lists or buildings."
+
+Disclosed addendum: the original stub named only topology; the on-street
+template is added here, still before any call. Wording is representation-
+neutral (names fields, never scene values); grader untouched; no ground truth
+enters the prompt.
+
+**Design (fresh seeds 2000-2019, haiku, textmap2 isolate, temp 0):**
+- Run CAT (`results/catscan-fresh`): HSCZ + scan-targets, all 10 questions,
+  n=200 items. The 8 non-overridden categories are prompt-identical to routed
+  Run A → free same-seed replicate of Run A.
+- Run CTL (`results/scanctl-fresh`): HSCZ generic scan, ONLY topology+onstreet,
+  n=40 items → same-seed head-to-head for the 2 changed categories, and
+  (combined with CAT's 8-cat slice) the queued single-recipe HSCZ control on
+  fresh seeds at no extra cost.
+
+**Predictions:** CAT path 70-90 (kill: <50 ⇒ category targets fail, routing
+stays the recipe); CAT on-street 80-90; CAT composite 58-64; CAT 8-cat slice
+52-59 (replicating Run A 55.6); CTL path <40 (the collapse replicates on fresh
+seeds — if it does NOT, the routing/cat-scan justification weakens and we say
+so). **Decision rule:** the scale-up recipe = CAT if its composite ≥ routed
+61.5 − 2pts (one pipeline beats two on simplicity); else routed. Cost ≈ $6.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

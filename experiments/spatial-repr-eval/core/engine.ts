@@ -9,7 +9,7 @@ import { hintFor } from "./hints";
 import { askedMissingInfo, hallucinatedIds } from "./metrics";
 import { askModel } from "./model";
 import { isVisionModel, modelInfo } from "./models";
-import { ALL_QUESTIONS, type Answer, QUESTIONS } from "./questions";
+import { ALL_QUESTIONS, type Answer, type Category, QUESTIONS } from "./questions";
 import { buildRepresentations, type RepresentationBundle } from "./representations";
 import type { Scene } from "./scene";
 
@@ -53,6 +53,10 @@ export interface EvalConfig {
    *  Turns the verdict-ceiling insight into an inference strategy — the model
    *  builds its own verdict layer. No scene facts are injected. */
   scan?: boolean;
+  /** Category-aware scan targets (pipeline v2): path/on-street questions get an
+   *  extraction brief matching what they consume (connectivity / placement)
+   *  instead of the generic spatial-facts scan. Only meaningful with scan. */
+  scanTargets?: boolean;
   /** Evidence citations: the answer must cite, per id, the representation line
    *  that justifies it. Grader ignores citations — the forcing function is the
    *  point (careful scanning, less hallucination). */
@@ -99,6 +103,27 @@ export interface ItemResult {
   turnsUsed?: number;
   error?: string;
 }
+
+/** Category-aware scan targets (pipeline v2). Screening showed the generic
+ *  "extract spatial facts" scan transforms measurement questions (coverage
+ *  20→95, containment 75→95) but collapses connectivity/placement ones (path
+ *  90→15, on-street 85→75): the answer call anchors on an extraction that
+ *  dropped or garbled the serves graph. For those two categories the scan
+ *  extracts the facts the question actually consumes. Wording is
+ *  representation-neutral — it names FIELDS the representation may carry, never
+ *  scene-specific values, so no ground truth leaks. */
+const SCAN_TARGETS: Partial<Record<Category, string>> = {
+  path:
+    "extract the CONNECTIVITY GRAPH only: one line per equipment entry with its exact id " +
+    "and the full list of building/equipment ids it serves, exactly as written; one line " +
+    "per cable with its exact id and its two endpoints (source → target). Do NOT extract " +
+    "positions, distances or streets — this question is answered purely by connectivity.",
+  "on-street":
+    "extract the STREET-PLACEMENT facts only: one line per equipment entry with its exact " +
+    "id and every fact the representation states about its position relative to streets " +
+    "(the street it sits on, its distance to the nearest street, or its coordinates if " +
+    "that is all the representation provides). Do NOT extract serves lists or buildings.",
+};
 
 /** Canonical answer key for majority voting: array fields sorted, metadata
  *  dropped, so semantically-equal answers vote together. */
@@ -260,16 +285,21 @@ export async function runEval(
     if (config.scan) {
       // Phase 1: extraction. The model reads the representation and lists the
       // facts relevant to the question — building its own verdict layer.
+      // Category-aware target (pipeline v2): the generic "spatial facts" scan
+      // collapses connectivity questions — the answer call anchors on an
+      // extraction that garbled the serves graph (path 90→15 in screening).
+      // The mechanism is unchanged; only WHAT to extract routes by category.
+      const target =
+        (config.scanTargets ? SCAN_TARGETS[q.category] : undefined) ??
+        "extract from the representation every fact relevant to the question below — " +
+          "one line per relevant entity, with its exact ids and measurements as they " +
+          "appear. Be complete: cover every entity the question could involve.";
       const scanRes = await askModel({
         apiKey: config.apiKey,
         model: t.model,
         temperature: config.temperature,
         representation: rep,
-        question:
-          "Do NOT answer yet. First, extract from the representation every fact relevant " +
-          "to the question below — one line per relevant entity, with its exact ids and " +
-          "measurements as they appear. Be complete: cover every entity the question could " +
-          `involve.\n\nQUESTION (for context only):\n${q.prompt(t.scene)}`,
+        question: `Do NOT answer yet. First, ${target}\n\nQUESTION (for context only):\n${q.prompt(t.scene)}`,
         freeText: true,
       });
       scanTokensIn = scanRes.inputTokens;
