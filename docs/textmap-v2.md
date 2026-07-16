@@ -881,15 +881,18 @@ fine-tuning. Kill: SFT textmap ≤ json ⇒ the representation advantage is
 prompt-regime-specific — reported.** Base-model (un-tuned 8B) columns run
 as controls.
 
-**E2 (pre-registered before v1 trains): the OptiMind error loop.** After
-v1 evaluates: run it on FRESH training-distribution scenes (seeds 60000+,
-still disjoint from eval), collect its per-category failures, generate a
-v2 dataset oversampling exactly those failure patterns (2-3× weight on
-failing categories, new scenes only), retrain (~$10-20), re-evaluate on
-the SAME eval seeds as v1. Prediction: v2 adds +3-8 over v1, concentrated
-in v1's weakest categories. Data-scaling (300→1,000 scenes, ~$30/epoch)
-fires only if v1 lands BELOW its 55-65 band. Training city stays NYC
-(+synthetic); London remains an eval-only city, never trained on.
+**E2 (revised BEFORE v1 finished training, user decision): scale + loop
+combined in v2.** The v2 dataset = 1,000 scenes (~20k examples, ~60M
+tokens; seeds 52000+ synthetic, 53000+ real-NYC — still disjoint from all
+eval ranges) PLUS error-loop oversampling: after v1 evaluates, its
+per-category failures on fresh training-distribution scenes (seeds
+60000+) get 2-3× weight in v2. Retrain (~$30), re-evaluate on the SAME
+eval seeds as v1. Prediction: v2 = v1 + 4-10, concentrated in v1's weak
+categories. Disclosed attribution limit: the v1→v2 delta bundles the
+data-scale and error-loop levers (loop-only ablation sacrificed for
+budget). v1 (6k examples) remains the registered band test (55-65) and
+the scale-ablation baseline. Training city stays NYC (+synthetic); London
+remains eval-only, never trained on.
 
 ## Integrity boundary
 
