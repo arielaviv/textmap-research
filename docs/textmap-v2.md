@@ -987,6 +987,14 @@ remains eval-only, never trained on.
    certify-london); CAT+routed-tools predicted 58-70. **Claim: the
    engineered-reading pipeline transfers across morphology. Kill: pipeline
    ≤ plain London textmap ⇒ the pipeline is NYC-specific — reported.**
+
+   **RESULT: baseline textmap 45.5 vs json 44.5 (both in band; narrowest
+   city gap yet — this seed set is kind to json, reported). Pipeline:
+   76.5 — ABOVE the 58-70 band (overshoot miss #8) and above NYC's own
+   75.5. +31.0 over plain on the unseen morphology; line-intersection
+   100, coverage/on-street/nearest 100, crossing 70, path 25 (the same
+   feeds= gap everywhere — consistent, not city-specific). The
+   pipeline-generalizes claim lands emphatically.**
 4. **Phoenix pair** (third morphology: low-density sprawl; seeds 5000+,
    n=20, plain arms): predicted textmap > json by +3..+15 (wide — suburban
    density changes question difficulty). Kill: json > phoenix textmap ⇒
