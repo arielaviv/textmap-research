@@ -880,6 +880,19 @@ Predictions: textmap ≥ json at every size; input-token ratio grows from
 ≥2 sizes ⇒ the scale claim dies and the paper says so.** ~$19, the big
 line of the batch.
 
+**C RESULT (2026-07-17, results/scale-v25, n=200/cell, fresh seeds 3000+,
+frozen v2.5):** textmap ≥ json at ALL four sizes — kill not triggered —
+with the pre-registered narrowing confirmed strongly: Δ = +11.0 (350m),
++5.5 (700m), +1.0 (1400m), +0.5 (2800m). Tokens: json 10.1k→19.3k vs
+textmap 6.9k→10.2k (ratio 1.46×→1.89×; predicted 1.4×→2×).
+Accuracy-per-token favors textmap ~1.9× at every size. Honest read for
+the paper: the RAW-accuracy advantage is a neighborhood-scale phenomenon
+(where most operational questions live); at district scale the advantage
+is economic — same accuracy at roughly half the tokens. The frontier
+plot, not a single bar, is the scale claim. (Curious observed pattern,
+reported: json's accuracy RISES with size 38→44 before dipping — possibly
+density/cap interactions; not investigated tonight.)
+
 **D. Repeat stability (haiku, seed 1000, 20 maps, json+textmap2 plain,
 temp 0, repeats=3).** Eliav-protocol requirement. Prediction: per-repeat
 accuracy within ±2.5 points of the run mean for both arms; textmap > json
