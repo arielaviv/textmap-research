@@ -997,6 +997,22 @@ Budget note, disclosed: chain 2 actual = ~$98 vs ~$69 estimated
 3-call tools items were under-modeled). Chain 3 (~$28) awaits a final
 gateway top-up; nothing fires into a $9.76 balance.
 
+## Fable 5 sniff — pre-registered 2026-07-17, BEFORE the run
+
+One cell, the user-funded question "is the frontier peak real": fable 5 +
+textmap2 + CAT + routed tools + rings, n=5 maps (seeds 2000-2004 —
+extension-compatible: a later full cell runs 2005+ and reports the union),
+50 items, ≈$30. A 1-item compat probe fires first (fable rejects sampling
+params; forced tool_choice may conflict with always-on thinking via the
+gateway — fallback = the disclosed noTools trailing-JSON mode).
+**Prediction: composite 80-90 (CI ±13 at n=50 — distinguishes ~85
+territory from ~65, not 82 from 78). Kill: <70 ⇒ the frontier
+extrapolation dies and the ladder tops out at haiku-routed 75.5 /
+sonnet-pipeline 68.** Known confound, disclosed: without a fable-plain
+cell the sniff cannot separate "pipeline stacks" from "fable internalizes
+the pipeline" (the gemini pattern); the two-cell headline design
+(+geojson-plain) resolves the baseline side later.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

@@ -83,6 +83,19 @@ export const MODELS: ModelInfo[] = [
   },
   { id: "google/gemini-2.5-flash", label: "gemini-2.5-flash", provider: "gateway", vision: true },
   {
+    // Frontier sniff (prereg "Fable sniff" block). Always-thinking, rejects
+    // sampling params; thinking spends inside max_tokens — budgets sized like
+    // gemini-pro's. If forced tool_choice conflicts with thinking via the
+    // gateway, flip noTools: true (the maverick fallback) and disclose.
+    id: "anthropic/claude-fable-5",
+    label: "fable-5 (gw)",
+    provider: "gateway",
+    vision: true,
+    acceptsTemperature: false,
+    maxTokens: 8000,
+    scanMaxTokens: 8000,
+  },
+  {
     id: "google/gemini-2.5-pro",
     label: "gemini-2.5-pro",
     provider: "gateway",
