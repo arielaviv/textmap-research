@@ -262,6 +262,51 @@ bullets on both arms' system prompts (--hint), predictions committed
 (boundary flip expected). Chain of 9 runs fired sequential/detached,
 est ≈ $39 of $52.51 balance.
 
+## 2026-07-16/17 — Overnight: tools arm, scale-up lands, SFT prepped ($100 top-up → $191+$100 credited)
+
+**Geometry-tools arm (probe ladder, ~$4 total):** the executor transplant.
+Probe 1 (no geometry in legend): model INVENTS rings → blockage 1/5.
+Probe 2 (v2.7 bbox extents): NYC's grid is rotated ~29°, bboxes 2-3× fat →
+over-detection, 0/10, v2.7 KILLED per its rule. Probe 3 (v2.8 exact
+footprint rings): **blockage 5/5 (from 0/20 baseline)**; crossing 0/5 —
+tool round truncated at 1500 tokens + CABLES rows were cell-frame only.
+Probe 4 (own 6k tool budget + meter cable endpoints): **blockage 5/5,
+crossing 3/5 — arm validated.** Paper pair: approximation poisons an
+honest executor in EITHER direction; segment×polygon needs exact rings.
+Full validation (all 10 questions, fresh seeds, predict 70-77) queued in
+chain 2.
+
+**Cross-model scale-up RESULT: 6/6 decided models positive — the ≥6/7
+criterion met.** deepseek 53.5→60.5, grok 47.5→54.5, qwen 31.5→39.0 (the
+refuser improves), kimi 46.5→52.5 (below its +8-15 band — miss #5),
+gpt-5-mini 47.5→55.5, sonnet 56.5→**68.0** (best number on the benchmark,
+above opus plain). Kimi baseline new: **json 19.5 vs textmap 46.5 (+27.0,
+starkest format gap yet)**. Sign test 6/6: p=.016.
+
+**Incident 7 (gemini-pro, $7):** pipeline run scored 20.0 with zero
+errors — runlog showed 80/100 answer calls truncated BEFORE the tool call
+(thinking ate the 1024 answer budget on longer pipeline prompts) and 100%
+of non-truncated answers were correct. Fix: maxTokens 8000 registered;
+budget-matched baseline+pipeline rerun queued in chain 2. The 20.0 stays
+in the record as the truncation datapoint.
+
+**SFT (paper 1) fully prepped, $0 spent:** 6,000-example dataset (5,880
+train + 120 val, ~18M tokens, 300 scenes at seeds 50000+ — disjoint from
+every eval range; hold-out question types EXCLUDED; textmap2+json arms of
+the same pairs; synthetic extraction traces; hints baked in; every label
+self-checked against the grader — 0 failures). `together:` inference path
+in the harness (trailing-JSON parse), scene-export endpoint,
+docs/sft-launch.md with exact commands. Morning: paste TOGETHER_API_KEY →
+upload → LoRA on Llama-3.1-8B-Instruct (~$10-20).
+
+**Night chain 2 (prereg'd, ~$69):** gemini-8k rerun pair → tools full
+validation → json+tools/wkt+tools symmetric test → llama-4-maverick +
+llama-3.3-70b + mistral-large-3 columns → powered scale rerun (seed 3000)
+→ repeats=3 stability. Fable 5 SKIPPED (decision: revision-if-asked).
+
+Ledger checkpoint (gateway /credits): **$182.84 used, $108.16 balance**
+(credited total now $291: $191 + $100 top-up 2026-07-17).
+
 ## Standing integrity rules (accumulated)
 
 1. Predictions pre-registered in textmap-v2.md BEFORE every run; kill
