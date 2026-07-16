@@ -1,5 +1,15 @@
 # SFT launch guide — Together AI LoRA (paper 1)
 
+> **LAUNCHED 2026-07-17 ~04:50**: job `ft-4dcd5a5f-cb27`, files
+> train `file-cb80b144-25c9-4b39-a224-4d49bf6f71c0` / val
+> `file-65ff2672-3218-431e-b397-745d42691caa`, LoRA r16/α32, lr 1e-4,
+> 1 epoch, train_on_inputs=auto. Output checkpoint:
+> `ari_8ff0/Meta-Llama-3.1-8B-Instruct-Reference-textmap-v25-725f3f60`
+> → eval model id: `together:ari_8ff0/Meta-Llama-3.1-8B-Instruct-Reference-textmap-v25-725f3f60`.
+> NOTE for eval: restart the dev server with TOGETHER_API_KEY in its env
+> first (the running server predates the key) — and only after chain 2
+> finishes.
+
 Everything below the "you" line is ready; the dataset is generated and
 committed metadata lives in the diary. Prereg: docs/textmap-v2.md, night
 batch block E (predictions + kill criteria committed before generation).
