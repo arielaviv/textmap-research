@@ -867,6 +867,16 @@ fine-tuning. Kill: SFT textmap ≤ json ⇒ the representation advantage is
 prompt-regime-specific — reported.** Base-model (un-tuned 8B) columns run
 as controls.
 
+**E2 (pre-registered before v1 trains): the OptiMind error loop.** After
+v1 evaluates: run it on FRESH training-distribution scenes (seeds 60000+,
+still disjoint from eval), collect its per-category failures, generate a
+v2 dataset oversampling exactly those failure patterns (2-3× weight on
+failing categories, new scenes only), retrain (~$10-20), re-evaluate on
+the SAME eval seeds as v1. Prediction: v2 adds +3-8 over v1, concentrated
+in v1's weakest categories. Data-scaling (300→1,000 scenes, ~$30/epoch)
+fires only if v1 lands BELOW its 55-65 band. Training city stays NYC
+(+synthetic); London remains an eval-only city, never trained on.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
