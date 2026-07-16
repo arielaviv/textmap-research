@@ -35,9 +35,12 @@ const SOURCE = arg("source", "real");
 const CITY = arg("city", "nyc");
 const QSET = arg("questions", "core"); // core | holdout
 const CONC = Number(arg("concurrency", "8"));
-const KEY = process.env.TOGETHER_API_KEY;
+// Any OpenAI-compatible host (Together default; HF Inference Endpoints via
+// --api-base https://<id>.endpoints.huggingface.cloud + --key-env HF_TOKEN).
+const API_BASE = arg("api-base", "https://api.together.xyz").replace(/\/$/, "");
+const KEY = process.env[arg("key-env", "TOGETHER_API_KEY")];
 if (!MODEL || !KEY) {
-  console.error("need --model and TOGETHER_API_KEY");
+  console.error("need --model and an API key in the env named by --key-env");
   process.exit(1);
 }
 
@@ -101,7 +104,7 @@ async function fetchScene(seed) {
 
 async function ask(user) {
   const t0 = Date.now();
-  const r = await fetch("https://api.together.xyz/v1/chat/completions", {
+  const r = await fetch(`${API_BASE}/v1/chat/completions`, {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${KEY}` },
     body: JSON.stringify({

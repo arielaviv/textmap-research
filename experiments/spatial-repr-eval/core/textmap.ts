@@ -390,7 +390,13 @@ function cableGlyph(dc: number, dr: number): string {
 
 export function toTextMapV2(
   scene: Scene,
-  opts: { protocol?: boolean; zoom?: number; extents?: boolean; rings?: boolean } = {},
+  opts: {
+    protocol?: boolean;
+    zoom?: number;
+    extents?: boolean;
+    rings?: boolean;
+    feeds?: boolean;
+  } = {},
 ): string {
   // protocol=false strips the READING-PROTOCOL lines (cross-reference rule,
   // worked example, geometry-vs-topology, thresholds) while keeping every DATA
@@ -406,10 +412,15 @@ export function toTextMapV2(
   // building's exact outline vertices in meters — probe 2 showed axis-aligned
   // bboxes over-detect on rotated street grids (NYC ~29°): segment×polygon
   // needs exact rings, in either direction of approximation the executor lies.
+  // feeds (v2.7, labeled artifact revision) states the homing topology on the
+  // source row (`feeds=` list) — a world fact of the scene model that the
+  // representation previously left unstated; its absence made rigorous
+  // readers refuse the conventional path answer (catscan smoke, 2026-07-16).
   const protocol = opts.protocol !== false;
   const zoom = Math.max(1, Math.min(opts.zoom ?? 1, 2));
   const extents = opts.extents === true;
   const rings = opts.rings === true;
+  const feeds = opts.feeds === true;
   const { minLng, minLat, maxLng, maxLat } = scene.bounds;
   const widthM = Math.max(1, haversineMeters([minLng, minLat], [maxLng, minLat]));
   const heightM = Math.max(1, haversineMeters([minLng, minLat], [minLng, maxLat]));
@@ -687,7 +698,15 @@ export function toTextMapV2(
     const dStreetStr = Number.isFinite(dStreet) ? ` d_street=${dStreet.toFixed(1)}m` : "";
     let detail: string;
     if (e.kind === "co") {
-      detail = "source";
+      // v2.7: the homing topology, stated (every non-source equipment homes
+      // to the CO in this scene model — a world fact, question-agnostic).
+      const fed = feeds
+        ? ` feeds=${scene.equipment
+            .filter((x) => x.kind !== "co")
+            .map((x) => x.id)
+            .join(",")}`
+        : "";
+      detail = `source${fed}`;
     } else {
       const serves = e.serves.length ? ` serves=${e.serves.join(",")}` : "";
       const near = e.serves.map((id) => buildingById.get(id)).find((b) => b?.address);

@@ -72,6 +72,7 @@ interface RunBody {
   toolsRouted?: boolean; // tool round only for compute-bound categories
   extents?: boolean; // v2.7: building footprint bboxes (ext=) in the textmap legend
   rings?: boolean; // v2.8: FOOTPRINTS section with exact outline vertices (meters)
+  feeds?: boolean; // v2.7: homing topology (feeds=) on the source row
   citations?: boolean; // require per-id evidence quotes (grader ignores them)
   zoom?: number; // textmap grid resolution multiplier [1,2] (v2.6, labeled)
   fewshot?: boolean; // prepend a mini worked example in the arm's format
@@ -164,6 +165,7 @@ export async function POST(req: Request) {
     toolsRouted: body.toolsRouted ?? false,
     extents: body.extents ?? false,
     rings: body.rings ?? false,
+    feeds: body.feeds ?? false,
     citations: body.citations ?? false,
     zoom: body.zoom,
     fewshot: body.fewshot ?? false,
@@ -191,6 +193,7 @@ export async function POST(req: Request) {
       toolsRouted: body.toolsRouted ?? false,
       extents: body.extents ?? false,
       rings: body.rings ?? false,
+      feeds: body.feeds ?? false,
       citations: body.citations ?? false,
       zoom: body.zoom ?? 1,
       fewshot: body.fewshot ?? false,

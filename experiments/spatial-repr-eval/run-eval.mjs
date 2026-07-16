@@ -68,6 +68,7 @@ const tools = process.argv.includes("--tools");
 const toolsRouted = process.argv.includes("--tools-routed");
 const extents = process.argv.includes("--extents");
 const rings = process.argv.includes("--rings");
+const feeds = process.argv.includes("--feeds");
 const citations = process.argv.includes("--citations");
 const zoom = Number(arg("zoom", "1"));
 const fewshot = process.argv.includes("--fewshot");
@@ -115,6 +116,7 @@ async function main() {
       ...(toolsRouted ? { toolsRouted: true } : {}),
       ...(extents ? { extents: true } : {}),
       ...(rings ? { rings: true } : {}),
+      ...(feeds ? { feeds: true } : {}),
       ...(citations ? { citations: true } : {}),
       ...(zoom > 1 ? { zoom } : {}),
       ...(fewshot ? { fewshot: true } : {}),

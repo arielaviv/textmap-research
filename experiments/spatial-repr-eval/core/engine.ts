@@ -72,6 +72,9 @@ export interface EvalConfig {
   /** v2.8 labeled artifact revision: FOOTPRINTS section with exact outline
    *  vertices (meters) — segment×polygon needs exact rings (probe 2). */
   rings?: boolean;
+  /** v2.7 labeled artifact revision: homing topology (`feeds=`) stated on the
+   *  source row — closes the path category's unstated-convention gap. */
+  feeds?: boolean;
   /** Evidence citations: the answer must cite, per id, the representation line
    *  that justifies it. Grader ignores citations — the forcing function is the
    *  point (careful scanning, less hallucination). */
@@ -255,6 +258,7 @@ export async function runEval(
         zoom: config.zoom,
         extents: config.extents,
         rings: config.rings,
+        feeds: config.feeds,
       }),
     );
   }
