@@ -25,6 +25,10 @@ export interface ModelInfo {
   /** Always-on thinking (Fable 5): thinking can't be disabled and historically
    *  conflicts with forced tool_choice — use auto + a MUST-call instruction. */
   alwaysThinking?: boolean;
+  /** Model/deployment rejects function calling (gateway 405). The answer call
+   *  falls back to a trailing "ANSWER: {json}" instruction + last-JSON parse —
+   *  same grader; answer-format difference disclosed per model. */
+  noTools?: boolean;
 }
 
 export const MODELS: ModelInfo[] = [
@@ -98,7 +102,13 @@ export const MODELS: ModelInfo[] = [
   { id: "deepseek/deepseek-v3.2", label: "deepseek-v3.2", provider: "gateway", vision: false },
   { id: "alibaba/qwen-3-235b", label: "qwen-3-235b", provider: "gateway", vision: false },
   { id: "moonshotai/kimi-k2", label: "kimi-k2", provider: "gateway", vision: false },
-  { id: "meta/llama-4-maverick", label: "llama-4-maverick", provider: "gateway", vision: true },
+  {
+    id: "meta/llama-4-maverick",
+    label: "llama-4-maverick",
+    provider: "gateway",
+    vision: true,
+    noTools: true, // gateway deployment 405s on function calling
+  },
   { id: "meta/llama-3.3-70b", label: "llama-3.3-70b", provider: "gateway", vision: false },
   { id: "mistral/mistral-large-3", label: "mistral-large-3", provider: "gateway", vision: false },
   { id: "deepseek/deepseek-chat", label: "deepseek-chat", provider: "gateway", vision: false },

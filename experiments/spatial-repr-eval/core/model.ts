@@ -306,10 +306,16 @@ async function askGateway(input: AskInput): Promise<AskResult> {
             ? (info.scanMaxTokens ?? Math.max(1500, info.maxTokens ?? 0))
             : (info.maxTokens ?? 1024)),
         messages: [
-          { role: "system", content: SYSTEM },
+          {
+            role: "system",
+            content:
+              info.noTools && !input.freeText
+                ? `${SYSTEM} You cannot call tools: instead, output your final line as: ANSWER: {json object with ONLY the requested field(s)}.`
+                : SYSTEM,
+          },
           { role: "user", content: userContent },
         ],
-        ...(input.freeText
+        ...(input.freeText || info.noTools
           ? {}
           : {
               tools: [
@@ -347,6 +353,9 @@ async function askGateway(input: AskInput): Promise<AskResult> {
       } catch {
         answer = null;
       }
+    } else if (info.noTools && !input.freeText && msg?.content) {
+      const parsed = lastJsonObject(msg.content);
+      if (parsed) answer = coerceAnswer(parsed);
     }
     return {
       answer,
