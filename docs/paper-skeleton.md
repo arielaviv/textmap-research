@@ -1,86 +1,128 @@
-# Paper skeleton — "Engineering Text Maps: How LLMs Actually Read Space"
+# Paper skeleton — GeoGlyph (rev 2026-07-17, post-program)
 
-Working title options:
-- *TextMap: Engineered Text Representations Beat Raw Geometry for LLM Map Reasoning*
-- *The Representation Is the Bottleneck: Text Maps for LLM Spatial Reasoning*
+**Title:** *GeoGlyph: Engineered Text Maps Unlock Spatial Reasoning in LLMs*
+(alt: *The Representation Is the Bottleneck: Text Maps, Reading Pipelines,
+and Executors for LLM Map Reasoning*)
+
+**The one-sentence claim:** the same frontier model reads the same map at
+~35% or ~75%+ accuracy depending only on how the map is written and read —
+representation, not scale, is the bottleneck, and an engineered
+representation compounds with reading protocols, executors, and fine-tuning.
 
 ## 1. Introduction
-- LLMs increasingly operate on geospatial data (agents over GIS stores), which
-  arrives as raw geometry (GeoJSON/WKT). Do models read it well? No — and
-  scaling the model does not help (headline: sonnet gains ZERO over haiku on
-  raw GeoJSON, 38.5% vs 38.7%).
-- Contribution: an engineered text representation (layered grid + measurement
-  legend + reading protocol), four design principles, and an oracle-graded
-  eval on real OpenStreetMap scenes showing +8.3 (haiku) and +18 (sonnet)
-  accuracy at up to 47% fewer tokens. McNemar p=0.0001 / p<0.0001.
+- Agents increasingly operate over geospatial stores; the data arrives as
+  raw geometry (GeoJSON/WKT) or rendered images. None of these is readable:
+  GeoJSON is flat at 19.5-44% across 11 models from 8 labs — and does not
+  improve with model scale (haiku 38.7 ≈ sonnet 38.5 ≈ opus 34.5, same maps).
+- Contributions: (1) GeoGlyph, an engineered text-map representation (aligned
+  layers, tokenizer-aware cells, exact-measurement legend, reading protocol)
+  with four design principles and a labeled precomputation boundary;
+  (2) a reading pipeline (error-derived hints + category-aware extraction)
+  that closes the extraction gap exactly to its measurable ceiling;
+  (3) a function-args geometry executor that breaks that ceiling — and
+  AMPLIFIES the representation gap rather than equalizing it;
+  (4) GeoGlyph-8B, a $15 LoRA that distills the pipeline into one call;
+  (5) an oracle-graded benchmark over real OSM scenes (3 morphologies,
+  16 question types), fully pre-registered with published prediction misses.
 
-## 2. Related work (calibrated against tonight's sweep)
-- ASCII/grid spatial benchmarks: Text2Space, GRASP, PlanarBench, "Learning to
-  Draw ASCII improves spatial reasoning" — consistent finding: naive ASCII
-  layouts LOSE to Cartesian/JSON coordinates. We agree — our v1 tied json and
-  the grid-only ablation is expected to lose; the contribution is what it
-  takes for a text map to WIN (dual coding + exact measurements + protocol).
-- Geospatial LLM benchmarks (GeoJSON topological relations, GPSBench, MapEval,
-  GS-QA, GeoBenchX): evaluate models ON standard formats; none engineer and
-  ablate an alternative representation with token economics on real maps.
-- OptiMind (arXiv 2509.22979): error-analysis-derived hints injected at
-  inference for NL→MILP. We transplant the idea INTO the artifact (the
-  representation ships its reading protocol) and measure it as a component.
+## 2. Key insights (OptiMind-style box)
+1. The representation, not the model, is the bottleneck (11-model table).
+2. A representation = format + measurements + reading protocol (ablations).
+3. Rendered images are the worst map interface (18.7%, 32% hallucinated ids;
+   replicated cross-vendor).
+4. The extraction-gap ceiling is measurable: precomputed-answers arm = 61.5
+   on haiku; the reading pipeline reaches exactly it (59.5-61.5). It
+   separates can't-read from can't-compute.
+5. Executors break the ceiling ONLY when the representation carries exact
+   geometry (rings): 0→90 on line-intersection; approximation in either
+   direction poisons an honest executor (probe pair). Tools AMPLIFY the
+   format gap (+8.3 plain → +25/+28 tooled).
+6. The transplant boundary: representation-native mechanisms transfer
+   (hints, scan); executor-dependent ones (voting, self-correction) fail
+   without a solver-shaped loop — measured negative results.
+7. Thinking models internalize the pipeline (gemini −1.0; the pipeline is
+   cheap-model technology) — and cheap-model + GeoGlyph ≈ frontier-model +
+   raw format at ~1/30 cost.
+8. SFT distills the pipeline into a single call on an 8B (v1/v2 numbers).
 
-## 3. Method: the textmap
-- Four principles: P1 lossless-at-query-time (aligned layers, unoccluded);
-  P2 tokenizer-aligned (one token per cell); P3 self-locating (rulers, GRID
-  REF affine); P4 dual-coded (grid gestalt + measurement legend sharing the
-  answer id namespace). Plus the reading protocol (3 lines, each earning its
-  place by ablation).
-- The precomputation dial: raw geometry → grid+legend → +entity-local
-  measurements (inside=, d_street=) → question-specific predicates (verdict
-  arm = declared ceiling/control). Boundary: entity-local measurements in,
-  global-scan judgments out.
-- Iteration methodology: probe (≈10 calls) → validate (20 maps) → certify
-  (60 maps); every change pre-registered (docs/textmap-v2.md is the log).
+## 3. Method
+### 3.1 The GeoGlyph artifact (Algorithm 1 = docs/paper-assets/algorithm-textmap.md)
+- P1 lossless-at-query-time (two aligned layers, unoccluded network);
+  P2 tokenizer-aligned (one code point per cell, space-separated);
+  P3 self-locating (rulers + GRID REF affine); P4 dual-coded (grid gestalt +
+  exact-measurement legend sharing the answer id namespace); reading
+  protocol (cross-reference, geometry-vs-topology, thresholds).
+- The precomputation dial and its boundary (entity-local world facts in,
+  question-specific judgments out; `verdict` arm = the labeled ceiling).
+  Labeled revisions: v2.6 zoom, v2.8 footprint rings + meter cable
+  endpoints (executor inputs). Deferred: v2.7 feeds= (path's known gap).
+### 3.2 The reading pipeline (H+S variants)
+- Error-derived hints (verbatim library = paper-assets/prompts.md §4);
+  category-aware scan (extraction briefs per question class); citations;
+  zoom. Screened 12 conditions; voting/turns/few-shot dropped (negative).
+### 3.3 The executor (tools arm)
+- Six generic planar primitives; model-marshaled inputs; the tool round
+  never sees the scene. Category routing (compute-bound only). The probe
+  ladder as a methods narrative (invented rings → fat bboxes → exact rings).
+### 3.4 GeoGlyph-8B (SFT)
+- 6k examples (both formats, oracle labels self-checked, synthetic traces =
+  distilled scan), seeds disjoint, hold-out question types excluded;
+  LoRA r16, 1 epoch, $15.20, 15 min. v2 = 1,000 scenes + error-loop
+  oversampling (bundled delta, disclosed).
 
 ## 4. Experimental setup
-- 60 real Manhattan scenes (OSM), 10 oracle-graded questions across 8
-  categories, forced structured answers, isolate mode (each arm sees ONLY its
-  representation), temperature 0, 1 repeat (repeats at temp 0 are correlated —
-  reported and avoided).
-- Metrics: correctness, tokens in/out, latency, hallucinated ids, missing-info.
+- Real OSM scenes: NYC (60 certified + fresh sets), London, Phoenix
+  (3 morphologies); synthetic generator for training/probes.
+- 10 core questions (8 categories) + 6 hold-outs written post-freeze;
+  oracle-graded; forced structured answers (or disclosed trailing-JSON for
+  no-tool models); isolate mode; temp 0; metrics incl. tokens/latency/
+  hallucinated-ids/missing-info. Pre-registration protocol: predictions +
+  kill criteria committed before every run; 7 misses published.
 
 ## 5. Results
-- **Certification (haiku, 60 maps):** textmap2 47.0% vs json 38.7%,
-  McNemar b=108/c=58, χ²=14.46, p=0.0001. Tokens: 6.7k vs 10.0k avg.
-- **Model tier (sonnet, 20 maps):** textmap2 56.5% vs json 38.5%,
-  χ²=19.76, p<0.0001. Raw-geometry reading does NOT improve with model tier;
-  representation gains COMPOUND with it.
-- **Tokens per correct answer:** haiku json ~26k vs textmap2 ~14k.
-- **Scale (350→2800m):** json 9.5k→18.4k tokens; textmap2 6.7k→9.7k at equal
-  accuracy — equal accuracy at 47% fewer tokens at 2800m; size ratio widens
-  1.48×→2.15× (chars, measured without model calls).
-- **Ablations:** protocol lines are per-line (geometry-vs-topology +35 on
-  path; a stale hint −15 on-street until removed). Image arm: 40%
-  hallucinated ids (identity does not survive rasterization). Category map:
-  entity-local categories dominated by textmap; crossing remains a raster
-  limitation (over-approximation at 4–5m cells) — reported honestly.
-- Per-category tables + accuracy-vs-token frontier figure from
-  results/{certify-haiku-v23,matrix-sonnet,scale-haiku,ablation-protocol}/.
+### 5.1 Formats (haiku, 60 maps): 47.0 / 38.7 / 36.5 / 18.7 (McNemar p=1e-4)
+### 5.2 Eleven models × plain (the flat-GeoJSON figure) + pipeline column
+  (8/9 positive, p=.002; gemini negative = insight 7; fable cells [PENDING])
+### 5.3 The ladder (haiku): 46.0 → 59.5 (reading = ceiling 61.5) → 72.5
+  (blanket tools) → **75.5 routed = final recipe** (123% of ceiling; all
+  category predictions hit; cheaper than blanket).
+### 5.4 Tools amplify the gap: textmap 72.5 vs json 47.5 vs wkt 44.5 under
+  IDENTICAL machinery (preregs ≥8 landed at 3×).
+### 5.5 Generalization: hold-outs +5.2 (p=.051); London +4.5 (p=.023) +
+  pipeline cell [PENDING]; Phoenix [PENDING]; scale 350→2800m (textmap ≥ at
+  all sizes, accuracy-per-token ~1.9×, gap converges — frontier figure);
+  repeats ×3 (spread ≤1.0).
+### 5.6 External: GeoFM Task-1 (their 1,400 triplets, their grading): plain
+  LOST 56.6 vs 58.9 (kill invoked, direction inversion diagnosed); one
+  symmetric direction rule → **61.9 > 58.4 (flip)**; haiku+GeoGlyph within
+  1pt of their GPT-4 zero-shot at a fraction of cost.
+### 5.7 GeoGlyph-8B: base control 12.5-20 / 14.5-31.7; v1 [PENDING —
+  fingerprint-gated eval in flight]; v2 [PENDING]; +tools zero-shot (E3)
+  [PENDING].
+### 5.8 Frontier sniff: fable-5 full stack [PENDING — prereg 80-90, kill <70].
 
-## 6. Lessons (each backed by a logged failure)
-1. Labels lose to measurements; a legend should carry each fact once, as a
-   measurement (the under=':' incident).
-2. A question must carry its own judgment criterion (the 3m threshold).
-3. Synthetic-grid degeneracies silently corrupt oracles (boundary-equality
-   thresholds; collinear convex hulls).
-4. Hints that outlive the defect they patched become noise (THRESHOLDS line).
-5. Single-scene synthetic wins do not transfer — iterate on real data.
+## 6. Negative results & incidents (own section — the reviewers' favorite)
+- Voting −3 at 10× cost; 5-turn self-correction −3; few-shot −5 (interferes
+  with scan); citations +0.3 (noise). v2.7 bboxes KILLED by its own rule.
+- Incident log (10 entries): headless-billing lessons, truncation-as-silent-
+  failure (gemini 80/100, fixed budget-matched), commute-contaminated run
+  (rerun), platform serving saga. All in the public diary.
 
-## 7. Limitations & future work
-- Crossing/raster over-approximation; line-intersection at haiku floor.
-- One city (Manhattan) — generalization to other morphologies pending.
-- Agentic (multi-turn) reading understates one-shot gaps — a second axis.
-- The grid as solver substrate (MILP over cells) — the OptiMind extension,
-  follow-up paper.
+## 7. Limitations
+- Path category: ground truth rests on an unstated homing convention the
+  explicit pipeline surfaces (v2.7 fix deferred — honesty note).
+- Compute-bound reading without tools stays hard (crossing raster limits).
+- FTTH-flavored schema (generic mechanism, one domain vocabulary).
+- Code-over-file agents saturate any parseable format — our claim scopes to
+  direct reading + function-args regimes (discussion).
 
-## Appendix
-- Full run logs (runlog.jsonl per run), pre-registered iteration log
-  (docs/textmap-v2.md), harness (public repo).
+## 8. Reproducibility
+- Public repo: harness, prompts (verbatim appendix), per-run runlog.jsonl,
+  pre-registration notebook, research diary with full money ledger (~$350
+  self-funded), GeoGlyph-8B weights (HF release with paper).
+
+## Appendices
+A. Algorithm 1 + worked example (paper-assets/: map PNG, both layers,
+   GeoJSON, WKT, all prompts). B. Question set (16, verbatim). C. Hint
+   library with error provenance. D. GeoFM per-predicate tables. E. SFT
+   training data card. F. Incident log.
