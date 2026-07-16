@@ -982,6 +982,14 @@ remains eval-only, never trained on.
    function calling; answers via trailing "ANSWER: {json}", disclosed as a
    format difference, same grader). Predictions unchanged: plain textmap
    42-52 vs json 30-40; pipeline +4..+10.
+
+   **RESULT (clean reruns, 0 errors; the commute-contaminated
+   matrix-maverick2 is discarded and marked as such): plain textmap 46.0
+   (band hit) vs json 20.0 (BELOW its 30-40 band — miss #11; the
+   second-starkest format gap after kimi, +26.0). Pipeline 53.0 (+7.0, in
+   band) — and its accidental same-config replicate scored 54.5, a ±0.75
+   stability check for free. Final model count: 12; pipeline sign test
+   9/10 positive (gemini the sole negative), one-sided p=.011.**
 3. **London pipeline cell** (fresh seeds 4000+, n=20): paired plain
    baseline predicted textmap 42-50 vs json 38-46 (mirroring
    certify-london); CAT+routed-tools predicted 58-70. **Claim: the
