@@ -840,7 +840,10 @@ pipeline+tools machinery it is +25.0 — **tools AMPLIFY the representation
 gap rather than equalizing it** (the function-args executor is only as
 good as the inputs the model can read out of its format: 15-digit
 GeoJSON coordinate arrays vs the legend's 3-digit meters and precomputed
-inside=/d_street= fields). wkt arm pending.
+inside=/d_street= fields). **wkt arm: 44.5 (band 42-58 HIT) — gap +28.0.
+The test is complete and symmetric: same pipeline, same tools, each
+format's native geometry — textmap 72.5 ≫ json 47.5 ≈ wkt 44.5. Both
+pre-registered ≥8 claims land at 3× their threshold.**
 
 **A. Format-symmetric tools test — json+tools and wkt+tools (haiku, n=20,
 seed 2000).** Each format gets the same pipeline machinery as textmap:
