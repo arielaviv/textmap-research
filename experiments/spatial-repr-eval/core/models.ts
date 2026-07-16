@@ -83,7 +83,11 @@ export const MODELS: ModelInfo[] = [
     label: "gemini-2.5-pro",
     provider: "gateway",
     vision: true,
-    scanMaxTokens: 8000, // thinks by default; thoughts spend inside max_tokens
+    // Thinks by default; thoughts spend inside max_tokens. At 1024 the
+    // pipeline's longer prompts truncated 80/100 answer calls BEFORE the tool
+    // call (pipe-gemini run) — every non-truncated answer was correct.
+    maxTokens: 8000,
+    scanMaxTokens: 8000,
   },
   {
     id: "xai/grok-4.1-fast-non-reasoning",
@@ -105,6 +109,10 @@ const BY_ID = new Map(MODELS.map((m) => [m.id, m]));
 /** Look up a model; unknown ids fall back to gateway (if `provider/model`) or
  *  Anthropic, vision-on, so a new id still runs. */
 export function modelInfo(id: string): ModelInfo {
+  // together:<id> is routed by prefix in askModel; text-only, temp OK.
+  if (id.startsWith("together:")) {
+    return { id, label: id.slice(9), provider: "gateway", vision: false };
+  }
   return (
     BY_ID.get(id) ?? {
       id,

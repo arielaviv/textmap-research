@@ -105,11 +105,11 @@ export interface Question {
   grade: (scene: Scene, a: Answer) => boolean;
 }
 
-function firstClosureId(scene: Scene): string {
+export function firstClosureId(scene: Scene): string {
   return scene.equipment.find((e) => e.kind === "closure")?.id ?? "CL-A";
 }
 
-function topologyBuilding(scene: Scene): string {
+export function topologyBuilding(scene: Scene): string {
   // a building that has a serving closure (avoid the coverage-gap building)
   const served = scene.buildings.find((b) =>
     scene.equipment.some((e) => e.kind === "closure" && e.serves.includes(b.id)),
@@ -117,20 +117,20 @@ function topologyBuilding(scene: Scene): string {
   return served?.id ?? scene.buildings[0].id;
 }
 
-function coEquip(scene: Scene): SceneEquipment | undefined {
+export function coEquip(scene: Scene): SceneEquipment | undefined {
   return scene.equipment.find((e) => e.kind === "co");
 }
 
 /** Target for the nearest-offstreet question: a building whose nearest street has a
  *  REAL name. The textmap legend omits the "street N" placeholder for unnamed OSM
  *  ways, so an unnamed target would test legend coverage instead of reasoning. */
-function offstreetTargetBuilding(scene: Scene): string {
+export function offstreetTargetBuilding(scene: Scene): string {
   const named = scene.buildings.find((b) => nearestStreetIsNamed(scene, b.centroid));
   return (named ?? scene.buildings[0]).id;
 }
 
 /** Building farthest from the CO — gives a long line likely to cross the cluster. */
-function blockageTarget(scene: Scene): SceneBuilding {
+export function blockageTarget(scene: Scene): SceneBuilding {
   const co = coEquip(scene);
   if (!co) return scene.buildings[scene.buildings.length - 1];
   let best = scene.buildings[0];

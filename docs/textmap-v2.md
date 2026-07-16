@@ -801,6 +801,18 @@ accuracy within ±2.5 points of the run mean for both arms; textmap > json
 in every repeat. This measures provider nondeterminism at temp 0, not
 sampling variance.
 
+**A-fix. Gemini-pro answer-budget truncation + budget-matched rerun.**
+The chain's pipe-gemini scored 20.0 (baseline 54.5) with ZERO errors —
+diagnosis from the runlog: 80/100 answer calls emitted NO tool call (the
+1024-token answer budget was consumed by thinking on the pipeline's longer
+prompts), and **every one of the 20 non-truncated answers was correct**.
+The 20.0 stays in the record as the truncation datapoint. Fix, disclosed:
+gemini-2.5-pro gets maxTokens 8000 (it was the only thinking model without
+one); the gemini pair reruns BUDGET-MATCHED — baseline json+textmap2 AND
+CAT pipeline, both at 8000, n=10, seed 1000. Predictions: baseline-8k
+textmap 50-62; pipeline-8k 60-72; positive pipeline delta. Kill:
+pipeline-8k < baseline-8k ⇒ gemini counts NEGATIVE in the sign test.
+
 **E. SFT (paper 1, Together AI LoRA on Llama-3.1-8B-Instruct).** Training
 data policy, fixed BEFORE generation: train seeds 50000+ (disjoint from
 every eval range: 1000-1059, 2000-2019, 3000+scale, 9500-9702 smokes;

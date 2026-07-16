@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TextMap vs GeoJSON — Preliminary Results</title>
+<style>
+  :root {
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --geojson: #2a78d6;
+    --textmap: #008300;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #ffffff; color: var(--ink);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 44px 24px 80px; }
+  h1 { font-size: 22px; font-weight: 650; margin: 0 0 4px; }
+  h2 { font-size: 16px; font-weight: 650; margin: 40px 0 8px; }
+  p  { margin: 0 0 12px; }
+  .sub { color: var(--ink-2); font-size: 14px; margin-bottom: 24px; }
+  .caption { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+  figure { margin: 20px 0 28px; }
+  svg { display: block; max-width: 100%; height: auto; }
+  .legend { display: flex; gap: 16px; font-size: 13px; color: var(--ink-2); margin: 0 0 6px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+  .sw.gj { background: var(--geojson); } .sw.tm { background: var(--textmap); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 10px 0 4px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grid); }
+  th { font-weight: 650; font-size: 13px; color: var(--ink-2); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  ul { margin: 6px 0 12px; padding-left: 20px; }
+  li { margin: 4px 0; }
+  .note { color: var(--ink-2); font-size: 13.5px; }
+  /* SVG text */
+  text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .tick { font-size: 11px; fill: var(--muted); }
+  .xlab { font-size: 12px; fill: var(--ink-2); }
+  .val  { font-size: 12px; fill: var(--ink); font-weight: 600; }
+  .val-in { font-size: 11.5px; fill: #ffffff; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>TextMap vs GeoJSON: how LLMs read maps</h1>
+  <p class="sub">Preliminary results · real OpenStreetMap scenes · answers graded automatically against geometric ground truth · temperature 0 · each format shown in isolation</p>
+
+  <p><strong>Setup.</strong> The same maps are given to the model in two representations —
+  <strong>GeoJSON</strong> (raw geometry, the baseline an LLM agent normally receives) and
+  <strong>TextMap</strong> (an ASCII grid + a measurement legend). The model answers 10 spatial
+  questions per map; a geometry oracle grades every answer. Tokens, latency and hallucinated
+  entity ids are logged per answer.</p>
+
+  <!-- ============ FIGURE 1 — main result ============ -->
+  <h2>1. Main result — 60 maps, Claude Haiku 4.5</h2>
+  <figure>
+    <div class="legend">
+      <span><span class="sw gj"></span>GeoJSON</span>
+      <span><span class="sw tm"></span>TextMap</span>
+    </div>
+    <svg viewBox="0 0 340 280" style="width:340px" role="img" aria-label="Accuracy, 60 maps: GeoJSON 38.7%, TextMap 47.0%">
+      <!-- gridlines -->
+      <line x1="48" y1="246"  x2="320" y2="246"  stroke="#c3c2b7" stroke-width="1"/>
+      <line x1="48" y1="188.5" x2="320" y2="188.5" stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="48" y1="131"  x2="320" y2="131"  stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="48" y1="73.5" x2="320" y2="73.5" stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="48" y1="16"   x2="320" y2="16"   stroke="#e1e0d9" stroke-width="1"/>
+      <text class="tick" x="40" y="250" text-anchor="end">0</text>
+      <text class="tick" x="40" y="192.5" text-anchor="end">20</text>
+      <text class="tick" x="40" y="135" text-anchor="end">40</text>
+      <text class="tick" x="40" y="77.5" text-anchor="end">60</text>
+      <text class="tick" x="40" y="20" text-anchor="end">80%</text>
+      <!-- bars -->
+      <path d="M104,246 L104,138.7 Q104,134.7 108,134.7 L124,134.7 Q128,134.7 128,138.7 L128,246 Z" fill="#2a78d6">
+        <title>GeoJSON — 38.7% correct (600 answers, 60 maps)</title></path>
+      <path d="M240,246 L240,114.9 Q240,110.9 244,110.9 L260,110.9 Q264,110.9 264,114.9 L264,246 Z" fill="#008300">
+        <title>TextMap — 47.0% correct (600 answers, 60 maps)</title></path>
+      <text class="val" x="116" y="127.7" text-anchor="middle">38.7%</text>
+      <text class="val" x="252" y="103.9" text-anchor="middle">47.0%</text>
+      <text class="xlab" x="116" y="266" text-anchor="middle">GeoJSON</text>
+      <text class="xlab" x="252" y="266" text-anchor="middle">TextMap</text>
+    </svg>
+    <p class="caption">Figure 1. Accuracy over 1,200 graded answers (60 maps × 2 formats × 10 questions).
+    Paired McNemar test: χ² = 14.46, p = 0.0001. TextMap also used 33% fewer input tokens
+    (6,739 vs 10,025 per call).</p>
+  </figure>
+
+  <!-- ============ FIGURE 2 — tier curve ============ -->
+  <h2>2. Scaling the model does not help GeoJSON</h2>
+  <p>The same 20 maps, three model tiers. On raw GeoJSON, accuracy is flat — a stronger model
+  extracts nothing more from raw coordinates. On TextMap, accuracy climbs with the model.</p>
+  <figure>
+    <div class="legend">
+      <span><span class="sw gj"></span>GeoJSON</span>
+      <span><span class="sw tm"></span>TextMap</span>
+    </div>
+    <svg viewBox="0 0 640 285" role="img" aria-label="Accuracy by model tier: GeoJSON flat around 35 to 38 percent, TextMap rises 46 to 64.5 percent">
+      <line x1="48" y1="246"  x2="620" y2="246"  stroke="#c3c2b7" stroke-width="1"/>
+      <line x1="48" y1="188.5" x2="620" y2="188.5" stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="48" y1="131"  x2="620" y2="131"  stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="48" y1="73.5" x2="620" y2="73.5" stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="48" y1="16"   x2="620" y2="16"   stroke="#e1e0d9" stroke-width="1"/>
+      <text class="tick" x="40" y="250" text-anchor="end">0</text>
+      <text class="tick" x="40" y="192.5" text-anchor="end">20</text>
+      <text class="tick" x="40" y="135" text-anchor="end">40</text>
+      <text class="tick" x="40" y="77.5" text-anchor="end">60</text>
+      <text class="tick" x="40" y="20" text-anchor="end">80%</text>
+      <!-- Haiku (center 143) -->
+      <path d="M118,246 L118,142.2 Q118,138.2 122,138.2 L138,138.2 Q142,138.2 142,142.2 L142,246 Z" fill="#2a78d6">
+        <title>GeoJSON — Haiku 4.5: 37.5%</title></path>
+      <path d="M144,246 L144,117.8 Q144,113.8 148,113.8 L164,113.8 Q168,113.8 168,117.8 L168,246 Z" fill="#008300">
+        <title>TextMap — Haiku 4.5: 46.0%</title></path>
+      <text class="val" x="130" y="131.2" text-anchor="middle">37.5</text>
+      <text class="val" x="156" y="106.8" text-anchor="middle">46.0</text>
+      <text class="xlab" x="143" y="266" text-anchor="middle">Haiku 4.5</text>
+      <!-- Sonnet (center 334) -->
+      <path d="M309,246 L309,139.3 Q309,135.3 313,135.3 L329,135.3 Q333,135.3 333,139.3 L333,246 Z" fill="#2a78d6">
+        <title>GeoJSON — Sonnet 4.6: 38.5%</title></path>
+      <path d="M335,246 L335,87.6 Q335,83.6 339,83.6 L355,83.6 Q359,83.6 359,87.6 L359,246 Z" fill="#008300">
+        <title>TextMap — Sonnet 4.6: 56.5%</title></path>
+      <text class="val" x="321" y="128.3" text-anchor="middle">38.5</text>
+      <text class="val" x="347" y="76.6" text-anchor="middle">56.5</text>
+      <text class="xlab" x="334" y="266" text-anchor="middle">Sonnet 4.6</text>
+      <!-- Opus (center 525) -->
+      <path d="M500,246 L500,150.8 Q500,146.8 504,146.8 L520,146.8 Q524,146.8 524,150.8 L524,246 Z" fill="#2a78d6">
+        <title>GeoJSON — Opus 4.8: 34.5%</title></path>
+      <path d="M526,246 L526,64.6 Q526,60.6 530,60.6 L546,60.6 Q550,60.6 550,64.6 L550,246 Z" fill="#008300">
+        <title>TextMap — Opus 4.8: 64.5%</title></path>
+      <text class="val" x="512" y="139.8" text-anchor="middle">34.5</text>
+      <text class="val" x="538" y="53.6" text-anchor="middle">64.5</text>
+      <text class="xlab" x="525" y="266" text-anchor="middle">Opus 4.8</text>
+    </svg>
+    <p class="caption">Figure 2. Accuracy (%) on the identical 20 maps for all three models.
+    GeoJSON differences across models are within noise; the TextMap gain grows from +8.5
+    (Haiku) to +30 points (Opus). The representation, not the model, is the bottleneck.</p>
+  </figure>
+
+  <!-- ============ FIGURE 3 — per category ============ -->
+  <h2>3. Where TextMap wins — and where it does not</h2>
+  <figure>
+    <div class="legend">
+      <span><span class="sw gj"></span>GeoJSON</span>
+      <span><span class="sw tm"></span>TextMap</span>
+    </div>
+    <svg viewBox="0 0 640 400" role="img" aria-label="Per-category accuracy, Opus 4.8">
+      <!-- vertical grid -->
+      <line x1="148" y1="14" x2="148" y2="376" stroke="#c3c2b7" stroke-width="1"/>
+      <line x1="266" y1="14" x2="266" y2="376" stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="384" y1="14" x2="384" y2="376" stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="502" y1="14" x2="502" y2="376" stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="620" y1="14" x2="620" y2="376" stroke="#e1e0d9" stroke-width="1"/>
+      <text class="tick" x="148" y="392" text-anchor="middle">0</text>
+      <text class="tick" x="266" y="392" text-anchor="middle">25</text>
+      <text class="tick" x="384" y="392" text-anchor="middle">50</text>
+      <text class="tick" x="502" y="392" text-anchor="middle">75</text>
+      <text class="tick" x="620" y="392" text-anchor="middle">100%</text>
+
+      <!-- Containment: GJ 20, TM 100 -->
+      <text class="xlab" x="138" y="37" text-anchor="end">Containment</text>
+      <path d="M148,22 L238.4,22 Q242.4,22 242.4,26 L242.4,32 Q242.4,36 238.4,36 L148,36 Z" fill="#2a78d6"><title>GeoJSON — containment: 20%</title></path>
+      <text class="val" x="248.4" y="33">20</text>
+      <path d="M148,38 L616,38 Q620,38 620,42 L620,48 Q620,52 616,52 L148,52 Z" fill="#008300"><title>TextMap — containment: 100%</title></path>
+      <text class="val-in" x="614" y="49" text-anchor="end">100</text>
+
+      <!-- On-street: GJ 30, TM 100 -->
+      <text class="xlab" x="138" y="83" text-anchor="end">On-street</text>
+      <path d="M148,68 L285.6,68 Q289.6,68 289.6,72 L289.6,78 Q289.6,82 285.6,82 L148,82 Z" fill="#2a78d6"><title>GeoJSON — on-street: 30%</title></path>
+      <text class="val" x="295.6" y="79">30</text>
+      <path d="M148,84 L616,84 Q620,84 620,88 L620,94 Q620,98 616,98 L148,98 Z" fill="#008300"><title>TextMap — on-street: 100%</title></path>
+      <text class="val-in" x="614" y="95" text-anchor="end">100</text>
+
+      <!-- Mixed: GJ 3.3, TM 45 -->
+      <text class="xlab" x="138" y="129" text-anchor="end">Mixed</text>
+      <path d="M148,114 L159.6,114 Q163.6,114 163.6,118 L163.6,124 Q163.6,128 159.6,128 L148,128 Z" fill="#2a78d6"><title>GeoJSON — mixed: 3.3%</title></path>
+      <text class="val" x="169.6" y="125">3</text>
+      <path d="M148,130 L356.4,130 Q360.4,130 360.4,134 L360.4,140 Q360.4,144 356.4,144 L148,144 Z" fill="#008300"><title>TextMap — mixed: 45%</title></path>
+      <text class="val" x="366.4" y="141">45</text>
+
+      <!-- Coverage: GJ 60, TM 95 -->
+      <text class="xlab" x="138" y="175" text-anchor="end">Coverage</text>
+      <path d="M148,160 L427.2,160 Q431.2,160 431.2,164 L431.2,170 Q431.2,174 427.2,174 L148,174 Z" fill="#2a78d6"><title>GeoJSON — coverage: 60%</title></path>
+      <text class="val" x="437.2" y="171">60</text>
+      <path d="M148,176 L592.4,176 Q596.4,176 596.4,180 L596.4,186 Q596.4,190 592.4,190 L148,190 Z" fill="#008300"><title>TextMap — coverage: 95%</title></path>
+      <text class="val-in" x="590.4" y="187" text-anchor="end">95</text>
+
+      <!-- Nearest: GJ 90, TM 95 -->
+      <text class="xlab" x="138" y="221" text-anchor="end">Nearest</text>
+      <path d="M148,206 L568.8,206 Q572.8,206 572.8,210 L572.8,216 Q572.8,220 568.8,220 L148,220 Z" fill="#2a78d6"><title>GeoJSON — nearest: 90%</title></path>
+      <text class="val-in" x="566.8" y="217" text-anchor="end">90</text>
+      <path d="M148,222 L592.4,222 Q596.4,222 596.4,226 L596.4,232 Q596.4,236 592.4,236 L148,236 Z" fill="#008300"><title>TextMap — nearest: 95%</title></path>
+      <text class="val-in" x="590.4" y="233" text-anchor="end">95</text>
+
+      <!-- Line-intersection: GJ 0, TM 5 -->
+      <text class="xlab" x="138" y="267" text-anchor="end">Line-intersection</text>
+      <text class="val" x="154" y="263">0</text>
+      <path d="M148,268 L167.6,268 Q171.6,268 171.6,272 L171.6,278 Q171.6,282 167.6,282 L148,282 Z" fill="#008300"><title>TextMap — line-intersection: 5%</title></path>
+      <text class="val" x="177.6" y="279">5</text>
+
+      <!-- Path: GJ 85, TM 75 -->
+      <text class="xlab" x="138" y="313" text-anchor="end">Path</text>
+      <path d="M148,298 L545.2,298 Q549.2,298 549.2,302 L549.2,308 Q549.2,312 545.2,312 L148,312 Z" fill="#2a78d6"><title>GeoJSON — path: 85%</title></path>
+      <text class="val-in" x="543.2" y="309" text-anchor="end">85</text>
+      <path d="M148,314 L498,314 Q502,314 502,318 L502,324 Q502,328 498,328 L148,328 Z" fill="#008300"><title>TextMap — path: 75%</title></path>
+      <text class="val" x="508" y="325">75</text>
+
+      <!-- Crossing: GJ 50, TM 40 -->
+      <text class="xlab" x="138" y="359" text-anchor="end">Crossing</text>
+      <path d="M148,344 L380,344 Q384,344 384,348 L384,354 Q384,358 380,358 L148,358 Z" fill="#2a78d6"><title>GeoJSON — crossing: 50%</title></path>
+      <text class="val" x="390" y="355">50</text>
+      <path d="M148,360 L332.8,360 Q336.8,360 336.8,364 L336.8,370 Q336.8,374 332.8,374 L148,374 Z" fill="#008300"><title>TextMap — crossing: 40%</title></path>
+      <text class="val" x="342.8" y="371">40</text>
+    </svg>
+    <p class="caption">Figure 3. Accuracy (%) by question category, Opus 4.8, 20 maps, sorted by
+    TextMap advantage. TextMap dominates spatial-relationship questions (containment, on-street,
+    mixed, coverage); raw coordinates stay competitive on point-distance questions (nearest, path)
+    and line-crossing, a known limitation of the grid's cell resolution. Both formats fail
+    line-intersection. Reported as-is.</p>
+  </figure>
+
+  <!-- ============ FIGURE 4 — tokens vs size ============ -->
+  <h2>4. Cost — TextMap stays compact as maps grow</h2>
+  <figure>
+    <div class="legend">
+      <span><span class="sw gj"></span>GeoJSON</span>
+      <span><span class="sw tm"></span>TextMap</span>
+    </div>
+    <svg viewBox="0 0 640 285" role="img" aria-label="Input tokens by map size: GeoJSON grows 9.5k to 18.4k, TextMap 6.7k to 9.7k">
+      <line x1="48" y1="246"  x2="620" y2="246"  stroke="#c3c2b7" stroke-width="1"/>
+      <line x1="48" y1="188.5" x2="620" y2="188.5" stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="48" y1="131"  x2="620" y2="131"  stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="48" y1="73.5" x2="620" y2="73.5" stroke="#e1e0d9" stroke-width="1"/>
+      <line x1="48" y1="16"   x2="620" y2="16"   stroke="#e1e0d9" stroke-width="1"/>
+      <text class="tick" x="40" y="250" text-anchor="end">0</text>
+      <text class="tick" x="40" y="192.5" text-anchor="end">5k</text>
+      <text class="tick" x="40" y="135" text-anchor="end">10k</text>
+      <text class="tick" x="40" y="77.5" text-anchor="end">15k</text>
+      <text class="tick" x="40" y="20" text-anchor="end">20k</text>
+      <!-- 350m (center 119.5) -->
+      <path d="M94.5,246 L94.5,140.8 Q94.5,136.8 98.5,136.8 L114.5,136.8 Q118.5,136.8 118.5,140.8 L118.5,246 Z" fill="#2a78d6"><title>GeoJSON — 350 m map: 9,498 input tokens</title></path>
+      <path d="M120.5,246 L120.5,173 Q120.5,169 124.5,169 L140.5,169 Q144.5,169 144.5,173 L144.5,246 Z" fill="#008300"><title>TextMap — 350 m map: 6,700 input tokens</title></path>
+      <text class="val" x="106.5" y="129.8" text-anchor="middle">9.5k</text>
+      <text class="val" x="132.5" y="162" text-anchor="middle">6.7k</text>
+      <text class="xlab" x="119.5" y="266" text-anchor="middle">350 m</text>
+      <!-- 700m (center 262.5) -->
+      <path d="M237.5,246 L237.5,98 Q237.5,94 241.5,94 L257.5,94 Q261.5,94 261.5,98 L261.5,246 Z" fill="#2a78d6"><title>GeoJSON — 700 m map: 13,221 input tokens</title></path>
+      <path d="M263.5,246 L263.5,164.4 Q263.5,160.4 267.5,160.4 L283.5,160.4 Q287.5,160.4 287.5,164.4 L287.5,246 Z" fill="#008300"><title>TextMap — 700 m map: 7,446 input tokens</title></path>
+      <text class="val" x="249.5" y="87" text-anchor="middle">13.2k</text>
+      <text class="val" x="275.5" y="153.4" text-anchor="middle">7.4k</text>
+      <text class="xlab" x="262.5" y="266" text-anchor="middle">700 m</text>
+      <!-- 1400m (center 405.5) -->
+      <path d="M380.5,246 L380.5,81.5 Q380.5,77.5 384.5,77.5 L400.5,77.5 Q404.5,77.5 404.5,81.5 L404.5,246 Z" fill="#2a78d6"><title>GeoJSON — 1400 m map: 14,655 input tokens</title></path>
+      <path d="M406.5,246 L406.5,153.3 Q406.5,149.3 410.5,149.3 L426.5,149.3 Q430.5,149.3 430.5,153.3 L430.5,246 Z" fill="#008300"><title>TextMap — 1400 m map: 8,405 input tokens</title></path>
+      <text class="val" x="392.5" y="70.5" text-anchor="middle">14.7k</text>
+      <text class="val" x="418.5" y="142.3" text-anchor="middle">8.4k</text>
+      <text class="xlab" x="405.5" y="266" text-anchor="middle">1400 m</text>
+      <!-- 2800m (center 548.5) -->
+      <path d="M523.5,246 L523.5,38.4 Q523.5,34.4 527.5,34.4 L543.5,34.4 Q547.5,34.4 547.5,38.4 L547.5,246 Z" fill="#2a78d6"><title>GeoJSON — 2800 m map: 18,398 input tokens</title></path>
+      <path d="M549.5,246 L549.5,138.5 Q549.5,134.5 553.5,134.5 L569.5,134.5 Q573.5,134.5 573.5,138.5 L573.5,246 Z" fill="#008300"><title>TextMap — 2800 m map: 9,694 input tokens</title></path>
+      <text class="val" x="535.5" y="27.4" text-anchor="middle">18.4k</text>
+      <text class="val" x="561.5" y="127.5" text-anchor="middle">9.7k</text>
+      <text class="xlab" x="548.5" y="266" text-anchor="middle">2800 m</text>
+    </svg>
+    <p class="caption">Figure 4. Average input tokens per call by map size (Haiku, same scenes at
+    four area sizes). GeoJSON grows with the geometry; TextMap stays near-flat — at 2.8 km it uses
+    47% fewer tokens at equal accuracy.</p>
+  </figure>
+
+  <!-- ============ significance table ============ -->
+  <h2>5. Statistical significance (McNemar, paired)</h2>
+  <p class="note">Each map is answered in both formats, so the test counts only the answers where
+  the formats disagree: <em>b</em> = TextMap right &amp; GeoJSON wrong, <em>c</em> = the reverse.</p>
+  <table>
+    <tr><th>Model</th><th class="n">Maps</th><th class="n">b</th><th class="n">c</th><th class="n">χ²</th><th class="n">p</th></tr>
+    <tr><td>Haiku 4.5</td><td class="n">60</td><td class="n">108</td><td class="n">58</td><td class="n">14.46</td><td class="n">0.0001</td></tr>
+    <tr><td>Sonnet 4.6</td><td class="n">20</td><td class="n">49</td><td class="n">13</td><td class="n">19.76</td><td class="n">&lt;0.0001</td></tr>
+    <tr><td>Opus 4.8</td><td class="n">20</td><td class="n">64</td><td class="n">4</td><td class="n">51.19</td><td class="n">&lt;0.0001</td></tr>
+  </table>
+  <p class="caption">On Opus, of the 68 answers where the formats disagreed, TextMap was right in 64.</p>
+
+  <!-- ============ limitations ============ -->
+  <h2>6. Not yet proven — next runs</h2>
+  <ul>
+    <li><strong>One neighbourhood:</strong> all maps are distinct blocks within a ~2 km area of
+    Manhattan (one street morphology). A second, differently-shaped city is next.</li>
+    <li><strong>Held-out questions:</strong> the question set was designed alongside the format;
+    a separate question set the design never saw will rule out benchmark tuning.</li>
+    <li><strong>Anthropic models only</strong> so far; GPT / Gemini / open models are queued.</li>
+    <li>Sonnet/Opus points are 20 maps each (the 60-map run is the certified headline).</li>
+  </ul>
+
+  <p class="note">Reliability note: both text formats almost never invent entities (hallucinated-id
+  rate ≤1%). Rendering the same maps to an image raised it to ~40% — rasterization destroys entity
+  identity. Full four-format comparison (incl. WKT, image) to follow.</p>
+
+  <p class="note">Data: the attached CSVs contain one row per graded answer
+  (columns: <code style="font-size:12px">arm</code> = format, <code style="font-size:12px">correct</code>,
+  <code style="font-size:12px">category</code>, <code style="font-size:12px">inputTokens</code>).
+  Every number above is reproducible from them.</p>
+
+</div>
+</body>
+</html>

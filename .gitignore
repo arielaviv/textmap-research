@@ -7,3 +7,4 @@ build
 *.tsbuildinfo
 .DS_Store
 .vercel
+sft-data/

@@ -76,6 +76,9 @@ function coerceAnswer(raw: unknown): Answer {
 }
 
 export async function askModel(input: AskInput): Promise<AskResult> {
+  // "together:<model-id>" routes to Together AI (SFT checkpoints + their base
+  // models). No registry entry needed — the prefix IS the routing.
+  if (input.model.startsWith("together:")) return askTogether(input);
   return modelInfo(input.model).provider === "gateway" ? askGateway(input) : askAnthropic(input);
 }
 
@@ -170,6 +173,97 @@ interface GatewayResponse {
     };
   }[];
   usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
+
+/** Extract the LAST JSON object from free text (fenced or bare). SFT models
+ *  answer with a trailing "ANSWER: {...}" line instead of a tool call. */
+function lastJsonObject(text: string): Record<string, unknown> | null {
+  const matches = text.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g);
+  if (!matches) return null;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    try {
+      const obj = JSON.parse(matches[i]) as unknown;
+      if (typeof obj === "object" && obj !== null) return obj as Record<string, unknown>;
+    } catch {
+      // keep scanning backwards
+    }
+  }
+  return null;
+}
+
+const TOGETHER_URL = "https://api.together.xyz/v1/chat/completions";
+const TOGETHER_SYSTEM =
+  "You are a precise spatial-analysis assistant for GIS / FTTH network data. " +
+  "You are given a representation of a small map (buildings, streets, equipment, cables) and ONE question. " +
+  "First write an EXTRACTION: section listing the facts relevant to the question, exactly as they appear in the representation. " +
+  "Then output your final line as: ANSWER: {json object with ONLY the requested field(s)}. " +
+  "Ids must match exactly the ids present in the data. Do not invent ids.";
+
+/** Together AI path — OpenAI-compatible, NO tool calling: the SFT checkpoint
+ *  (and its base-model control) answers in the trained trailing-JSON format,
+ *  parsed with lastJsonObject + coerceAnswer. Vision unsupported (text only). */
+async function askTogether(input: AskInput): Promise<AskResult> {
+  const key = process.env.TOGETHER_API_KEY;
+  if (!key) {
+    return {
+      answer: null,
+      inputTokens: 0,
+      outputTokens: 0,
+      latencyMs: 0,
+      error: "TOGETHER_API_KEY not set — export it (see docs/sft-launch.md).",
+    };
+  }
+  const model = input.model.slice("together:".length);
+  const t0 = Date.now();
+  try {
+    const res = await fetch(TOGETHER_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+      body: JSON.stringify({
+        model,
+        temperature: input.temperature,
+        // Trace + answer needs headroom; freeText (scan) reuses the same cap.
+        max_tokens: input.maxTokensOverride ?? 2000,
+        messages: [
+          { role: "system", content: TOGETHER_SYSTEM },
+          {
+            role: "user",
+            content: `MAP REPRESENTATION:\n${input.representation.text}\n\nQUESTION:\n${input.question}`,
+          },
+        ],
+        stream: false,
+      }),
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      return {
+        answer: null,
+        inputTokens: 0,
+        outputTokens: 0,
+        latencyMs: Date.now() - t0,
+        error: `together ${model} ${res.status}: ${txt.slice(0, 200)}`,
+      };
+    }
+    const data = (await res.json()) as GatewayResponse;
+    const content = data.choices?.[0]?.message?.content ?? "";
+    const parsed = input.freeText ? null : lastJsonObject(content);
+    return {
+      answer: parsed ? coerceAnswer(parsed) : null,
+      rawText: input.freeText ? content : undefined,
+      inputTokens: data.usage?.prompt_tokens ?? 0,
+      outputTokens: data.usage?.completion_tokens ?? 0,
+      latencyMs: Date.now() - t0,
+      ...(parsed || input.freeText ? {} : { error: "no JSON object found in reply" }),
+    };
+  } catch (err) {
+    return {
+      answer: null,
+      inputTokens: 0,
+      outputTokens: 0,
+      latencyMs: Date.now() - t0,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 async function askGateway(input: AskInput): Promise<AskResult> {
