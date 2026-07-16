@@ -94,6 +94,9 @@ export const MODELS: ModelInfo[] = [
   { id: "deepseek/deepseek-v3.2", label: "deepseek-v3.2", provider: "gateway", vision: false },
   { id: "alibaba/qwen-3-235b", label: "qwen-3-235b", provider: "gateway", vision: false },
   { id: "moonshotai/kimi-k2", label: "kimi-k2", provider: "gateway", vision: false },
+  { id: "meta/llama-4-maverick", label: "llama-4-maverick", provider: "gateway", vision: true },
+  { id: "meta/llama-3.3-70b", label: "llama-3.3-70b", provider: "gateway", vision: false },
+  { id: "mistral/mistral-large-3", label: "mistral-large-3", provider: "gateway", vision: false },
   { id: "deepseek/deepseek-chat", label: "deepseek-chat", provider: "gateway", vision: false },
 ];
 

@@ -764,6 +764,59 @@ categories, reported as such.** If it lands, the paper's pipeline story
 becomes: reading protocol closes the extraction gap (46→59.5 = verdict
 ceiling), the executor breaks it (59.5 → ~75), each mechanism labeled.
 
+## Night batch 2026-07-16/17 — pre-registered BEFORE any run ($100 top-up)
+
+All runs below fire sequentially after the scale-up chain completes. Fable 5
+is explicitly EXCLUDED (decision: skip for submission; revisit in revision
+if a reviewer asks).
+
+**A. Format-symmetric tools test — json+tools and wkt+tools (haiku, n=20,
+seed 2000).** Each format gets the same pipeline machinery as textmap:
+hints (the library's json-specific entries), scan, citations, tools — plus
+its NATIVE geometry (json/wkt carry exact rings already; textmap needed
+v2.8). No zoom (textmap-only artifact feature). Predictions: json+P+T
+45-60 (wide — scan/hints were never screened on json); wkt+P+T 42-58.
+**The pre-registered claim: textmap+P+T beats json+P+T by ≥8 points. Kill:
+gap <4 ⇒ "tools equalize formats" — reported as a major scope limit.**
+
+**B. Three new model columns — llama-4-maverick, llama-3.3-70b,
+mistral-large-3 (seed 1000; baseline json+textmap2 plain n=20, then CAT
+pipeline n=20).** Predictions (plain textmap vs json): maverick 42-52 vs
+30-40; llama-70b 38-50 vs 28-38; mistral-large 45-55 vs 32-42. Pipeline
+adds +4..+10 on each. Extends the vendor table to 10-11 models / 8 labs
+and the sign test to 10 models.
+
+**C. Scale rerun, powered (haiku, frozen v2.5 zoom=1, json+textmap2 plain,
+sizes 350/700/1400/2800m × 20 scenes × 10 questions, seed 3000 — fresh).**
+The old sweep (results/scale-haiku) was n=30/cell on a pre-freeze artifact.
+Predictions: textmap ≥ json at every size; input-token ratio grows from
+~1.4× (350m) to ~2× (2800m); accuracy gap may narrow at 2800m (58m cells)
+— accuracy-per-token dominates at ALL sizes. **Kill: json beats textmap at
+≥2 sizes ⇒ the scale claim dies and the paper says so.** ~$19, the big
+line of the batch.
+
+**D. Repeat stability (haiku, seed 1000, 20 maps, json+textmap2 plain,
+temp 0, repeats=3).** Eliav-protocol requirement. Prediction: per-repeat
+accuracy within ±2.5 points of the run mean for both arms; textmap > json
+in every repeat. This measures provider nondeterminism at temp 0, not
+sampling variance.
+
+**E. SFT (paper 1, Together AI LoRA on Llama-3.1-8B-Instruct).** Training
+data policy, fixed BEFORE generation: train seeds 50000+ (disjoint from
+every eval range: 1000-1059, 2000-2019, 3000+scale, 9500-9702 smokes;
+London never used in training); the 6 HOLD-OUT question types are EXCLUDED
+from training entirely — SFT's generalization is measured on them; mix
+~80% synthetic / 20% real-NYC scenes; textmap2 zoom=1; assistant turns
+carry a synthetic extraction trace (programmatically generated from the
+scene — the category-aware scan behavior baked in, OptiMind-style) then
+the oracle answer as trailing JSON. ~6,000 examples (~30M train tokens,
+1-2 epochs, ~$15-30). Inference: single call, trailing-JSON parse, same
+grader. **Predictions: SFT-8B textmap 55-65 (matching haiku+multi-call
+pipeline in ONE call); SFT-8B json 38-45; the format gap SURVIVES
+fine-tuning. Kill: SFT textmap ≤ json ⇒ the representation advantage is
+prompt-regime-specific — reported.** Base-model (un-tuned 8B) columns run
+as controls.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
