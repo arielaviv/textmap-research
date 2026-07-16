@@ -905,6 +905,14 @@ fine-tuning. Kill: SFT textmap ≤ json ⇒ the representation advantage is
 prompt-regime-specific — reported.** Base-model (un-tuned 8B) columns run
 as controls.
 
+**E3 (pre-registered before any SFT eval): SFT × tools-round column.**
+The SFT checkpoint also runs WITH the engine's geometry-tools round
+(zero-shot: the model was NOT trained on tool traces — disclosed), same
+fresh seeds, same grader, textmap2, n=20, ~$1. **Prediction: 55-70 (the
+risk is 8B zero-shot tool marshaling); kill: below the SFT plain-textmap
+score ⇒ an 8B cannot drive the executor untrained — reported, and trained
+tool-use becomes explicit future work (v3), not silently attempted.**
+
 **E2 (revised BEFORE v1 finished training, user decision): scale + loop
 combined in v2.** The v2 dataset = 1,000 scenes (~20k examples, ~60M
 tokens; seeds 52000+ synthetic, 53000+ real-NYC — still disjoint from all
