@@ -102,7 +102,37 @@ async function fetchScene(seed) {
   return (await r.json()).scene;
 }
 
+// tgi mode: client-side Llama-3.1 template + TGI native /generate (used when
+// the image's OpenAI route is unavailable — template quirk on some TGI tags).
+const API_MODE = arg("api-mode", "openai"); // openai | tgi
+
+function llamaPrompt(user) {
+  return (
+    `<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n${SYSTEM}<|eot_id|>` +
+    `<|start_header_id|>user<|end_header_id|>\n\n${user}<|eot_id|>` +
+    `<|start_header_id|>assistant<|end_header_id|>\n\n`
+  );
+}
+
+async function askTgi(user) {
+  const t0 = Date.now();
+  const r = await fetch(`${API_BASE}/generate`, {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${KEY}` },
+    body: JSON.stringify({
+      inputs: llamaPrompt(user),
+      parameters: { max_new_tokens: 1500, do_sample: false, return_full_text: false },
+    }),
+  });
+  const latencyMs = Date.now() - t0;
+  if (!r.ok) return { error: `${r.status}: ${(await r.text()).slice(0, 120)}`, latencyMs };
+  const data = await r.json();
+  const text = (Array.isArray(data) ? data[0]?.generated_text : data.generated_text) ?? "";
+  return { text, inputTokens: 0, outputTokens: 0, latencyMs };
+}
+
 async function ask(user) {
+  if (API_MODE === "tgi") return askTgi(user);
   const t0 = Date.now();
   const r = await fetch(`${API_BASE}/v1/chat/completions`, {
     method: "POST",
