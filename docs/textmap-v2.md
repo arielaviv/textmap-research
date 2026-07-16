@@ -836,6 +836,17 @@ their CAT levels (≥95); compute categories hold their tools levels
 (line-int ≥80, crossing ≥50, mixed ≥55). Kill: composite ≤ 72.5 ⇒ routing
 adds nothing over blanket tools; blanket stays the recipe.**
 
+**RESULT (2026-07-17, results/tools-routed, n=200 fresh seeds): 75.5 —
+band HIT, every per-category prediction HIT (coverage/on-street/nearest
+100, containment 90, line-intersection 85, crossing 60, mixed 60), and
+CHEAPER than blanket (41.6k vs 49.8k tokens/item, 0% hallucination).
+TOOL ROUTING IS THE FINAL RECIPE.** The haiku arc, complete and each
+mechanism labeled: plain 46.0 → engineered reading 59.5 (= the verdict
+ceiling) → +executor 72.5 → +category routing **75.5** — 123% of the
+handed-the-answers ceiling, +29.5 over plain. Remaining known gap: path
+40 (the unstated closure→CO homing; the v2.7 `feeds=` fix is the one
+artifact change left on the table, deliberately deferred).
+
 ## Night batch 2026-07-16/17 — pre-registered BEFORE any run ($100 top-up)
 
 All runs below fire sequentially after the scale-up chain completes. Fable 5
