@@ -9,6 +9,16 @@
 > NOTE for eval: restart the dev server with TOGETHER_API_KEY in its env
 > first (the running server predates the key) — and only after chain 2
 > finishes.
+>
+> **Serving resolution (2026-07-17 ~05:35):** the checkpoint is
+> dedicated-only — serverless returns `model_not_available`, and the Batch
+> API does NOT bypass it (probe batch COMPLETED with the same error in its
+> error file; output empty). Retraining on a different base = $15.20 +
+> uncertainty; rejected. Plan: **just-in-time dedicated endpoint** —
+> 4×H100 @ $21.60/hr, created right before each eval session, eval blasted
+> at concurrency 16, endpoint DELETED immediately after (~15-25 min ≈
+> $6-10/session; v1 + v2 sessions ≈ $12-20 total). Base-model control runs
+> serverlessly (Turbo) — no endpoint needed for it.
 
 Everything below the "you" line is ready; the dataset is generated and
 committed metadata lives in the diary. Prereg: docs/textmap-v2.md, night
