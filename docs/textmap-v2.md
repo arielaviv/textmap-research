@@ -851,6 +851,20 @@ CAT pipeline, both at 8000, n=10, seed 1000. Predictions: baseline-8k
 textmap 50-62; pipeline-8k 60-72; positive pipeline delta. Kill:
 pipeline-8k < baseline-8k ⇒ gemini counts NEGATIVE in the sign test.
 
+**RESULT (matrix-gemini8k + pipe-gemini8k): truncation fixed (0/100 null
+answers vs 80/100). Baseline-8k: textmap 62.0 vs json 44.0 (+18.0 format
+gap; textmap band hit at its ceiling — and at HALF the tokens and latency:
+6.2k/22.6s vs 13.9k/40.3s). Pipeline-8k: 61.0 (band hit) — but BELOW the
+62.0 baseline, so per the kill rule GEMINI COUNTS NEGATIVE (−1.0, within
+noise at n=100). Final sign test: 6/7 positive, one-sided p=.063 (7/8
+including the haiku anchor). The negative is itself a finding: with full
+thinking room, gemini-pro's PLAIN textmap already equals haiku's entire
+pipeline (62.0 ≈ 59.5-61.5) — a thinking model runs the scan internally,
+so the external pipeline substitutes for thinking rather than stacking.
+Predicted implication for the paper: the pipeline is a CHEAP-MODEL
+technology — it buys non-thinking models what thinking models grow
+natively.**
+
 **E. SFT (paper 1, Together AI LoRA on Llama-3.1-8B-Instruct).** Training
 data policy, fixed BEFORE generation: train seeds 50000+ (disjoint from
 every eval range: 1000-1059, 2000-2019, 3000+scale, 9500-9702 smokes;
