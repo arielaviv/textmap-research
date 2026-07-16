@@ -307,6 +307,48 @@ llama-3.3-70b + mistral-large-3 columns → powered scale rerun (seed 3000)
 Ledger checkpoint (gateway /credits): **$182.84 used, $108.16 balance**
 (credited total now $291: $191 + $100 top-up 2026-07-17).
 
+## 2026-07-17 morning — Chain 2 complete: ceiling broken, gap amplified
+
+**Tools full validation: 72.5 (n=200, fresh seeds) — haiku's verdict
+ceiling (61.5) BROKEN, +26.5 over plain.** Compute categories transformed
+(line-intersection 0→90, crossing 35→60, mixed 36.7→63.3); read-bound
+categories regressed under blanket tools (containment 100→70) → tool
+ROUTING prereg'd (75-82) for chain 3.
+
+**Format-symmetric tools test: the gap AMPLIFIES under tools.** Same
+pipeline + same executor, native geometry each: textmap 72.5 ≫ json 47.5
+≈ wkt 44.5. Plain gap +8.3 → tooled gap +25/+28 (both ≥8 preregs landed
+at 3× threshold). Garbage-in mechanism: 15-digit degree marshaling vs
+3-digit meters + precomputed legend fields.
+
+**Cross-model final: 8/9 positive, sign test p=.002** (llama-70b
+38.5→51.0 +12.5 above band; mistral 42.5→51.5 +9.0 in band; gemini-8k
+the sole negative at −1.0 — its thinking substitutes for the pipeline;
+truncation incident fixed and disclosed, 100% of non-truncated answers
+correct). Baseline gap varies +2.5 (mistral) … +27.0 (kimi json 19.5).
+
+**Scale, powered (n=200/cell):** textmap ≥ json at ALL 4 sizes; accuracy
+gap converges (+11.0→+0.5) while token ratio grows (1.46×→1.89×);
+accuracy-per-token ~1.9× everywhere. **Repeats (×3, temp 0): spreads
+≤1.0 point — the gap is stable, protocol requirement closed.**
+
+**Incidents 8-9:** maverick gateway deployment 405s on function calling →
+noTools trailing-JSON fallback built, redo queued; chain 2 actual ~$98 vs
+~$69 est (estimate-miss #3: 19k-token scale prompts, 3-call tools items).
+
+**SFT saga:** v1 trained ($15.196, val loss 0.253→0.089); serving
+gauntlet — serverless refused, batch refused (same error in error-file),
+base+LoRA-hotload toggle disabled platform-wide → merged-checkpoint
+dedicated endpoint (user-created, just-in-time, torn down per session).
+Standalone eval path built (sft-eval.mjs — training-format prompts,
+local grading) so SFT evals don't touch the dev server. v2 data ready
+(1,000 scenes total). Phoenix third-morphology slice fetched (22k
+buildings), registered, prereg'd.
+
+Ledger checkpoint (gateway /credits): **$281.24 used, $9.76 balance** —
+chain 3 (~$28, prereg'd, scripted) awaits final ~$40 top-up. Together:
+$15.20 of $76 used + endpoint sessions ~$12-20 expected.
+
 ## Standing integrity rules (accumulated)
 
 1. Predictions pre-registered in textmap-v2.md BEFORE every run; kill
