@@ -832,6 +832,16 @@ All runs below fire sequentially after the scale-up chain completes. Fable 5
 is explicitly EXCLUDED (decision: skip for submission; revisit in revision
 if a reviewer asks).
 
+**A RESULT, json arm (2026-07-17, results/pipe-json-tools, n=200):
+json + full pipeline + tools = 47.5 (band 45-60 HIT, 0 truncations) vs
+textmap + same machinery = 72.5. The pre-registered ≥8 gap lands at
++25.0.** The plain-format gap was +8.3 (47.0 vs 38.7); with identical
+pipeline+tools machinery it is +25.0 — **tools AMPLIFY the representation
+gap rather than equalizing it** (the function-args executor is only as
+good as the inputs the model can read out of its format: 15-digit
+GeoJSON coordinate arrays vs the legend's 3-digit meters and precomputed
+inside=/d_street= fields). wkt arm pending.
+
 **A. Format-symmetric tools test — json+tools and wkt+tools (haiku, n=20,
 seed 2000).** Each format gets the same pipeline machinery as textmap:
 hints (the library's json-specific entries), scan, citations, tools — plus
