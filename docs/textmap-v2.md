@@ -634,6 +634,29 @@ haiku-specific tuning, reported as such.** Qwen counts toward the tally
 like any model. Est. cost ≈ $31 (haiku CAT run = 31.5k in-tok/item anchors
 the estimate; sonnet ≈ $11 is the big line).
 
+**SCALE-UP RESULT (2026-07-17, results/pipe-* + matrix-kimi, run once):**
+
+| Model | plain textmap2 | CAT pipeline | Δ | predicted band |
+|---|---|---|---|---|
+| deepseek-v3.2 | 53.5 | **60.5** | +7.0 | 60-68 HIT |
+| grok-4.1-fast | 47.5 | **54.5** | +7.0 | 54-64 HIT |
+| qwen-3-235b | 31.5 | **39.0** | +7.5 | 35-55 HIT (refuser improves; halluc 16.5%) |
+| kimi-k2 | 46.5 (new; json 19.5) | **52.5** | +6.0 | +8..15 MISS low (positive) |
+| gpt-5-mini | 47.5 | **55.5** | +8.0 | 55-65 HIT |
+| sonnet-4.6 | 56.5 | **68.0** | +11.5 | 62-72 HIT (n=100) |
+| gemini-2.5-pro | 54.5 | 20.0 → truncation (see A-fix) | pending rerun | — |
+| _haiku (anchor, fresh seeds)_ | _46.0_ | _59.5_ | _+13.5_ | — |
+
+**Six of six decided models positive → the ≥6/7 success criterion is
+already met regardless of gemini's budget-matched rerun.** One-sided sign
+test at 6/6: p = 0.016 (7/7 if gemini lands positive: p = 0.008). The
+pipeline — tuned entirely on haiku's error taxonomy — transfers across
+vendors; even the protocol-refuser improves. Kimi's +6.0 under-shot its
++8-15 band (calibration miss #5, published). Sonnet+pipeline at 68.0 is
+the highest number on the benchmark to date — above opus plain (64.5).
+Kimi baseline adds the starkest single-model format gap yet: textmap 46.5
+vs json **19.5** (+27.0).
+
 **GeoFM Task-1 rerun with direction hints — same prereg block.** Their
 1,400 triplets, their prompt + grading, haiku, both arms, PLUS one extra
 system bullet per arm: the arm's direction rule from core/hints.ts
