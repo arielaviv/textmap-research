@@ -1055,6 +1055,43 @@ surfaces differ. A full n=20 fable cell + the geojson-plain contrast
 remain the optional $250-tier cells; seeds 2000-2004 here extend into
 them without re-payment.
 
+## GeoGlyph-8B v1 — RESULT (2026-07-17, served on HF A100/TGI after the Together saga)
+
+Serving verified by no-system-prompt fingerprint (trained EXTRACTION→ANSWER
+format emitted unconditionally) AND tensor byte-compare (q_proj differs from
+base, layernorm identical — correct LoRA merge). Base control = the FP8 base
+on identical prompts: textmap 12.5 / json 15.0.
+
+| Suite (arm) | textmap2 | json | note |
+|---|---|---|---|
+| NYC, trained question types (n=200) | **53.0** | 39.0 | +14.0 — gap distilled into one call; beats llama-3.3-70B plain (38.5) |
+| London, trained types, UNSEEN city (n=200) | **54.0** | 40.5 | +13.5 — **the format gap generalizes across morphology** |
+| Hold-out, UNSEEN question types (n=120) | 32.5 | 32.5 | **+0.0 — prediction MISS (predicted gap survives); v1 narrowing** |
+
+**Band check: NYC textmap 53.0 vs predicted 55-65 → 2 below (miss #12,
+published); json 39.0 in band (38-45).** Two honest findings:
+(1) The representation advantage **generalizes across geography** (London
++13.5 ≈ NYC +14.0, a city never trained on) but **NOT across task type**
+(hold-out +0). Diagnosis: v1 trained on only 10 question templates using a
+fixed set of answer fields; the 6 hold-out types use fields it never
+emitted (count/direction/quadrant), so it flails equally in both arms.
+Classic SFT narrowing — it traded generalization for in-distribution gain.
+Tell: haiku IN-CONTEXT kept its textmap gap on hold-outs (+5.2); the
+fine-tune lost it. This is a labeled limitation, not a bug, and it is the
+sharpest motivation for v2.
+(2) The headline SFT claim stands: a $15 / 15-min LoRA on an 8B distills
+the reading pipeline into a single call and reaches deepseek-v3.2-class
+accuracy (53.5) — 1000× less training compute than OptiMind's 8h×8×B200.
+
+**v2 spec revision (folded in from this result):** training question set
+expands from 10 → 30-50+ diverse templates (varied phrasings, all answer
+fields, rotated target entities) so "read the textmap" becomes a
+transferable skill; a FRESH hold-out set re-tests generalization; optional
+small general-instruction mix to resist narrowing. Plus the already-planned
+feeds= + rings + tool-call traces + error-loop + 1,000 scenes. Targets
+(prereg before training): v2-8B core 62-72, v2-8B hold-out gap RESTORED to
+≥+5, v2-20B core 72-82.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

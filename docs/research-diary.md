@@ -402,6 +402,27 @@ to the support ticket. Eval path pivots to HF Inference Endpoints
 (~$2-3 total, API-managed) pending user billing setup. The no-system-
 prompt fingerprint gate saved three would-have-been-corrupted eval runs.
 
+## 2026-07-17 — GeoGlyph-8B v1 EVALUATED (after a 7-attempt serving saga)
+
+Serving finally worked on HF Inference Endpoints (A100 + TGI image with
+maxInputLength set via the raw v2 API — the SDK's custom_image never passed
+env to the launcher). Path: Together served base weights (3×, proven by
+tensor byte-compare) -> HF L4/L40S OOM'd on a hidden 30GB host-RAM cap ->
+HF A100 default container = 7h no-batching -> TGI swaps ignored token
+limits -> raw-API PUT with first-class tgi image config = success.
+
+**Results (fingerprint-gated; base control FP8 = 12.5/15.0):**
+NYC trained types 53.0 vs 39.0 (+14); London unseen-city 54.0 vs 40.5
+(+13.5 — gap generalizes across morphology); hold-out unseen-question-types
+32.5 vs 32.5 (+0 — SFT narrowing, prediction miss #12). Headline holds: a
+$15 8B LoRA reaches deepseek-class accuracy in ONE call, beating its own
+70B cousin (38.5) — 1000× less compute than OptiMind. Limitation is honest
+and motivates v2's question-diversity expansion (10 -> 30-50+ templates).
+
+HF endpoint deleted; billing stopped. Together SFT saga: 6 dead serving
+attempts, all documented for the reproducibility appendix. Weights safe:
+local + HF repo arielaviv/geoglyph-v1.
+
 ## Standing integrity rules (accumulated)
 
 1. Predictions pre-registered in textmap-v2.md BEFORE every run; kill
