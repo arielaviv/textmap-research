@@ -1092,6 +1092,40 @@ feeds= + rings + tool-call traces + error-loop + 1,000 scenes. Targets
 (prereg before training): v2-8B core 62-72, v2-8B hold-out gap RESTORED to
 ≥+5, v2-20B core 72-82.
 
+## GeoGlyph v2 — pre-registered 2026-07-17, BEFORE data generation
+
+Motivated by v1's two findings: format gap generalizes across CITY (+13.5
+London) but not across TASK TYPE (hold-out +0 — narrowing). v2 attacks both
+the ceiling and the narrowing. Five upgrades over v1, each labeled:
+
+1. **Question diversity** (the narrowing fix): each core question gets 3-5
+   PARAPHRASED prompt variants + rotated target entities. Teaches "read the
+   textmap" as a phrasing-invariant skill, not per-template memorization.
+   A FRESH hold-out set (new phrasings the model never saw) re-tests
+   generalization.
+2. **Tool-call traces** (the ceiling-raiser): for compute-bound categories
+   (crossing, line-intersection, mixed) the assistant turn emits a
+   geometry-tool CALL → executor RESULT → ANSWER — training the model to
+   drive the executor itself (OptiMind solver-parity, in weights).
+3. **feeds=** (v2.7, implemented): homing topology stated on the source row
+   — closes path's unstated-convention gap.
+4. **rings** (v2.8): FOOTPRINTS section in every training textmap so the
+   model learns to marshal exact polygons for the executor.
+5. **Scale + error-loop**: 1,000 scenes (up from 300); oversample the
+   categories v1 was weak on (crossing, mixed, line-intersection).
+
+Seeds 50000+ (disjoint from all eval ranges); London/Phoenix never trained.
+Trained on Llama-3.1-8B (GeoGlyph-8B-v2) AND gpt-oss-20B (GeoGlyph-20B,
+OptiMind base parity, 3.6B active). 2 epochs. Serving = the proven
+HF-A100-TGI runbook (docs/sft-runbook.md).
+
+**Predictions (committed before training): v2-8B core 62-72, v2-8B
+hold-out gap RESTORED to ≥+5 (kill: still 0 ⇒ diversity insufficient,
+reported), v2-8B + tools 70-80; v2-20B core 72-82, v2-20B + tools 78-86.
+Flagship claim: GeoGlyph-20B + tools ≥ fable-5 + full pipeline + tools
+(78). Kill for the flagship: v2-20B+tools < 76 ⇒ the frontier isn't
+reachable by an open model at this scale — reported honestly.**
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

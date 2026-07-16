@@ -41,6 +41,12 @@ const SYNTH_BASE = Number(arg("synth-base", "50000"));
 const REAL_BASE = Number(arg("real-base", "51000"));
 const OUT_DIR = arg("out", "sft-data");
 const secret = process.env.EVAL_SECRET ?? "";
+// v2 flags: diversity (paraphrase variants), tool-call traces, feeds=, rings.
+const V2_DIVERSE = process.argv.includes("--diverse");
+const V2_TOOLS = process.argv.includes("--tools");
+const V2_FEEDS = process.argv.includes("--feeds");
+const V2_RINGS = process.argv.includes("--rings");
+const VARIANTS = Number(arg("variants", V2_DIVERSE ? "3" : "1")); // paraphrases per scene×question
 
 // ---------------------------------------------------------------------------
 // json arm — faithful copy of representations.ts toJSON (kept in sync by the
@@ -236,6 +242,133 @@ function trace(qid, scene) {
 }
 
 // ---------------------------------------------------------------------------
+// v2 DIVERSITY: paraphrase variants per question (the narrowing fix). idx 0 is
+// the canonical prompt; idx>0 are rewordings that preserve the SAME embedded
+// scene ids and meaning, so "read the textmap" becomes phrasing-invariant.
+// ---------------------------------------------------------------------------
+const PARAPHRASES = {
+  containment: (s) => [
+    "Which equipment items sit INSIDE a building footprint? List their ids in `equipmentIds` (empty array if none).",
+    "Report every equipment id whose point falls within a building's footprint. Fill `equipmentIds` (empty array if none).",
+    "Find all equipment located inside building footprints and list their ids in `equipmentIds` (empty if none).",
+  ],
+  crossing: (s) => [
+    "Which cables pass THROUGH a building they do not terminate at? List their ids in `cableIds` (empty array if none).",
+    "Report every cable whose path crosses a foreign building footprint (not its own endpoints). Fill `cableIds` (empty if none).",
+    "List the ids of cables that intersect a building's interior other than their source/target, in `cableIds` (empty if none).",
+  ],
+  onstreet: (s) => {
+    const id = questions.firstClosureId(s);
+    return [
+      `Does equipment ${id} sit on a street (within ~8m of a street centerline) rather than off-street or inside a building? Fill \`onStreet\` (true/false).`,
+      `Is ${id} located on the street — i.e. within about 8m of a street centerline? Report \`onStreet\` as true or false.`,
+      `Determine whether ${id} is street-placed (≤~8m from a centerline). Fill \`onStreet\` (true/false).`,
+    ];
+  },
+  nearest: (s) => {
+    const b = s.buildings[0].id;
+    return [
+      `Which closure is geographically closest to building ${b}? Fill \`closureId\` with its id.`,
+      `Find the nearest closure to building ${b} and put its id in \`closureId\`.`,
+      `Report the closure with the smallest distance to ${b}'s centroid in \`closureId\`.`,
+    ];
+  },
+  coverage_gap: (s) => [
+    "Is any building left without a closure within 35m of it? List every such building in `buildingIds` (empty array if none).",
+    "Find buildings that have NO closure inside a 35m radius (coverage gaps). Fill `buildingIds` (empty if none).",
+    "Which buildings' nearest closure is farther than 35m away? List their ids in `buildingIds` (empty if none).",
+  ],
+  topology: (s) => {
+    const b = questions.topologyBuilding(s);
+    return [
+      `Trace the equipment on the path from building ${b} to the source (CO), nearest-first. Fill \`equipmentPath\` with the ordered ids.`,
+      `From building ${b}, list the equipment back to the CO in order (closest first) in \`equipmentPath\`.`,
+      `What is the ordered chain of equipment linking ${b} to the network source? Fill \`equipmentPath\` nearest-first.`,
+    ];
+  },
+  blockage: (s) => {
+    const co = questions.coEquip(s);
+    const t = questions.blockageTarget(s);
+    return [
+      `A straight cable runs from ${co?.id ?? "CO-1"} to building ${t.id}. Which OTHER buildings' footprints does it pass through? Fill \`buildingIds\` (exclude ${t.id}; empty if none).`,
+      `Draw the straight line ${co?.id ?? "CO-1"}→${t.id}; list every building (besides ${t.id}) it crosses in \`buildingIds\` (empty if none).`,
+      `Which buildings block the direct segment from ${co?.id ?? "CO-1"} to ${t.id}? List their ids in \`buildingIds\`, excluding ${t.id} (empty if none).`,
+    ];
+  },
+  road_misplacement: (s) => [
+    "Which equipment (excluding the CO) is misplaced into a carriageway — within ~5m of a street centerline? List their ids in `equipmentIds` (empty if none).",
+    "Report equipment sitting in the road (≤~5m from a centerline), excluding the central office. Fill `equipmentIds` (empty if none).",
+    "Find equipment placed on the roadway rather than a verge/sidewalk. List ids in `equipmentIds`, excluding the CO (empty if none).",
+  ],
+  enclosure: (s) => [
+    "Which buildings lie in the INTERIOR of the cluster (centroid not on the convex hull)? List them in `buildingIds` (empty if none).",
+    "Report buildings whose centroids are NOT on the outer perimeter (convex hull) of the cluster. Fill `buildingIds` (empty if none).",
+    "Find the interior buildings — those not on the hull of all centroids. List ids in `buildingIds` (empty if none).",
+  ],
+  nearest_offstreet: (s) => {
+    const b = questions.offstreetTargetBuilding(s);
+    return [
+      `Building ${b}'s home street is the street nearest it. Which closure is nearest ${b} among closures whose own nearest street DIFFERS from ${b}'s home street? Fill \`closureId\` ('none' if all share the home street).`,
+      `Considering ${b}, find the closest closure that sits on a DIFFERENT street than ${b}'s nearest street. Report its id in \`closureId\` ('none' if none).`,
+      `Which closure — off ${b}'s home street — is nearest to ${b}? Fill \`closureId\`, or 'none' if every closure is on the home street.`,
+    ];
+  },
+};
+
+// Returns the prompt text for a given question + variant index (0 = canonical).
+function promptVariant(q, scene, idx) {
+  if (idx === 0 || !PARAPHRASES[q.id]) return q.prompt(scene);
+  const vs = PARAPHRASES[q.id](scene);
+  return vs[(idx - 1) % vs.length];
+}
+
+// ---------------------------------------------------------------------------
+// v2 TOOL-CALL TRACES (the ceiling-raiser): for compute-bound categories the
+// assistant emits a geometry-tool CALL, the executor's exact RESULT, then the
+// answer — distilling the executor into the weights (OptiMind solver-parity).
+// Coordinates come from the scene in meters (x,y from SW), matching the rings
+// the model sees in the textmap FOOTPRINTS section.
+// ---------------------------------------------------------------------------
+const TOOL_CATS = new Set(["crossing", "line-intersection", "mixed"]);
+const xM = (s, c) => Math.round(geo.haversineMeters([s.bounds.minLng, c[1]], [c[0], c[1]]));
+const yM = (s, c) => Math.round(geo.haversineMeters([c[0], s.bounds.minLat], [c[0], c[1]]));
+const ringM = (s, b) => b.footprint.map((c) => [xM(s, c), yM(s, c)]);
+
+function toolTrace(qid, scene, answer) {
+  const calls = [];
+  const results = [];
+  if (qid === "blockage") {
+    const co = questions.coEquip(scene);
+    const t = questions.blockageTarget(scene);
+    if (!co) return null;
+    const a = [xM(scene, co.position), yM(scene, co.position)];
+    const b = [xM(scene, t.centroid), yM(scene, t.centroid)];
+    const rings = {};
+    for (const bl of scene.buildings) if (bl.id !== t.id) rings[bl.id] = ringM(scene, bl);
+    calls.push(JSON.stringify({ op: "segment_intersects_polygon", units: "m", a, b, rings }));
+    results.push(`segment_intersects_polygon = intersects: [${(answer.buildingIds ?? []).join(", ")}]`);
+  } else if (qid === "crossing") {
+    for (const c of scene.cables) {
+      const a = [xM(scene, c.path[0]), yM(scene, c.path[0])];
+      const b = [xM(scene, c.path[c.path.length - 1]), yM(scene, c.path[c.path.length - 1])];
+      const rings = {};
+      for (const bl of scene.buildings) if (bl.id !== c.sourceId && bl.id !== c.targetId) rings[bl.id] = ringM(scene, bl);
+      const hit = (answer.cableIds ?? []).includes(c.id);
+      calls.push(JSON.stringify({ op: "segment_intersects_polygon", units: "m", a, b, rings, note: c.id }));
+      results.push(`${c.id}: ${hit ? "crosses a foreign building" : "clear"}`);
+    }
+  } else if (qid === "enclosure") {
+    const pts = {};
+    for (const b of scene.buildings) pts[b.id] = [xM(scene, b.centroid), yM(scene, b.centroid)];
+    calls.push(JSON.stringify({ op: "convex_hull", units: "m", points: pts }));
+    results.push(`convex_hull -> interior: [${(answer.buildingIds ?? []).join(", ")}]`);
+  } else {
+    return null;
+  }
+  return `TOOL_CALLS:\n${calls.join("\n")}\n\nTOOL_RESULTS:\n${results.join("\n")}`;
+}
+
+// ---------------------------------------------------------------------------
 const SYSTEM =
   "You are a precise spatial-analysis assistant for GIS / FTTH network data. " +
   "You are given a representation of a small map (buildings, streets, equipment, cables) and ONE question. " +
@@ -275,7 +408,8 @@ async function main() {
       console.error(`skip seed ${spec.seed}: ${e.message}`);
       continue;
     }
-    const reps = { textmap2: toTextMapV2(scene, { zoom: 1 }), json: toJSON(scene) };
+    const tmOpts = { zoom: 1, feeds: V2_FEEDS, rings: V2_RINGS };
+    const reps = { textmap2: toTextMapV2(scene, tmOpts), json: toJSON(scene) };
     for (const q of CORE) {
       const answer = oracleAnswer(q.id, scene);
       // Self-check: the oracle answer MUST grade correct — a label that fails
@@ -285,15 +419,27 @@ async function main() {
         continue;
       }
       const tr = trace(q.id, scene);
-      for (const arm of ["textmap2", "json"]) {
-        const hint = hintFor(q.id, arm);
-        rows.push({
-          messages: [
-            { role: "system", content: SYSTEM },
-            { role: "user", content: `${reps[arm]}\n\nQUESTION:\n${q.prompt(scene)}${hint}` },
-            { role: "assistant", content: `EXTRACTION:\n${tr}\n\nANSWER: ${JSON.stringify(answer)}` },
-          ],
-        });
+      // v2: tool-call block for compute-bound categories (distills the executor).
+      const tools = V2_TOOLS && TOOL_CATS.has(q.category) ? toolTrace(q.id, scene, answer) : null;
+      // v2 error-loop: oversample the categories v1 was weak on.
+      const reps_for_cat = V2_TOOLS && TOOL_CATS.has(q.category) ? 2 : 1;
+      const assistant = tools
+        ? `EXTRACTION:\n${tr}\n\n${tools}\n\nANSWER: ${JSON.stringify(answer)}`
+        : `EXTRACTION:\n${tr}\n\nANSWER: ${JSON.stringify(answer)}`;
+      for (let rep = 0; rep < reps_for_cat; rep++) {
+        for (let v = 0; v < VARIANTS; v++) {
+          const promptText = promptVariant(q, scene, (rep + v) % Math.max(1, VARIANTS));
+          for (const arm of ["textmap2", "json"]) {
+            const hint = hintFor(q.id, arm);
+            rows.push({
+              messages: [
+                { role: "system", content: SYSTEM },
+                { role: "user", content: `${reps[arm]}\n\nQUESTION:\n${promptText}${hint}` },
+                { role: "assistant", content: assistant },
+              ],
+            });
+          }
+        }
       }
     }
     done++;
