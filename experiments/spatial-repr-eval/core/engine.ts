@@ -63,6 +63,9 @@ export interface EvalConfig {
    *  representation; pure math executes (never sees the scene) and results
    *  are appended to the answer call. See core/geo-tools.ts. */
   tools?: boolean;
+  /** Category-routed tools: the tool round fires ONLY for compute-bound
+   *  categories (TOOL_CATEGORIES); read-bound categories keep pure reading. */
+  toolsRouted?: boolean;
   /** v2.7 labeled artifact revision: building footprint bounding boxes
    *  (`ext=` meters) in the textmap legend — exact inputs for the tools arm. */
   extents?: boolean;
@@ -144,6 +147,11 @@ const SCAN_TARGETS: Partial<Record<Category, string>> = {
     "(the street it sits on, its distance to the nearest street, or its coordinates if " +
     "that is all the representation provides). Do NOT extract serves lists or buildings.",
 };
+
+/** Compute-bound categories — where the tools-validation error analysis showed
+ *  the executor transforms results (line-intersection 0→90, crossing 35→60,
+ *  mixed 36.7→63.3) while read-bound categories regressed under blanket tools. */
+const TOOL_CATEGORIES = new Set<Category>(["line-intersection", "crossing", "mixed"]);
 
 /** Canonical answer key for majority voting: array fields sorted, metadata
  *  dropped, so semantically-equal answers vote together. */
@@ -348,8 +356,15 @@ export async function runEval(
     let outputTokens = scanTokensOut;
     let latencyMs = scanLatency;
 
+    // Tool routing (prereg 2026-07-17): blanket tools REGRESS read-bound
+    // categories (containment 100→70 — the legend precomputes them and the
+    // tool round tempts recomputation on self-marshaled inputs). Routed mode
+    // fires the executor only where computation is genuinely needed.
+    const toolsActive =
+      config.tools && (!config.toolsRouted || TOOL_CATEGORIES.has(q.category));
+
     let toolsText: string | undefined;
-    if (config.tools) {
+    if (toolsActive) {
       // Tool round: the model reads coordinates out of the representation and
       // requests planar computations; pure math runs on exactly what it
       // supplied (a misread coordinate yields an honestly-computed wrong

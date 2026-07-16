@@ -69,6 +69,7 @@ interface RunBody {
   scan?: boolean; // two-phase scan-then-answer reading
   scanTargets?: boolean; // category-aware extraction briefs for path/on-street (with scan)
   tools?: boolean; // geometry-tools arm: batch function-args round (core/geo-tools.ts)
+  toolsRouted?: boolean; // tool round only for compute-bound categories
   extents?: boolean; // v2.7: building footprint bboxes (ext=) in the textmap legend
   rings?: boolean; // v2.8: FOOTPRINTS section with exact outline vertices (meters)
   citations?: boolean; // require per-id evidence quotes (grader ignores them)
@@ -160,6 +161,7 @@ export async function POST(req: Request) {
     scan: body.scan ?? false,
     scanTargets: body.scanTargets ?? false,
     tools: body.tools ?? false,
+    toolsRouted: body.toolsRouted ?? false,
     extents: body.extents ?? false,
     rings: body.rings ?? false,
     citations: body.citations ?? false,
@@ -186,6 +188,7 @@ export async function POST(req: Request) {
       scan: body.scan ?? false,
       scanTargets: body.scanTargets ?? false,
       tools: body.tools ?? false,
+      toolsRouted: body.toolsRouted ?? false,
       extents: body.extents ?? false,
       rings: body.rings ?? false,
       citations: body.citations ?? false,

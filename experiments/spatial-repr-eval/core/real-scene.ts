@@ -297,6 +297,9 @@ const CITY_CENTERS: Record<string, Coord> = {
   // Second-city generalization: irregular pre-modern street network (vs
   // Manhattan's regular grid), English names. Center ≈ Covent Garden.
   london: [-0.1276, 51.5074],
+  // Third morphology: low-density single-family sprawl (vs dense urban),
+  // English names. Center ≈ North Phoenix residential.
+  phoenix: [-112.05, 33.585],
 };
 
 /** Seed-jitter range in degrees. nyc keeps the historical 0.02 so the 60
@@ -307,6 +310,7 @@ const CITY_JITTER: Record<string, number> = {
   "tel-aviv": 0.02,
   nyc: 0.02,
   london: 0.04,
+  phoenix: 0.03,
 };
 
 export function cityList(): string[] {

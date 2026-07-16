@@ -962,6 +962,30 @@ budget). v1 (6k examples) remains the registered band test (55-65) and
 the scale-ablation baseline. Training city stays NYC (+synthetic); London
 remains eval-only, never trained on.
 
+## Chain 3 — pre-registered 2026-07-17 morning, BEFORE runs
+
+1. **Tool-routing validation** — prereg'd above (composite 75-82, kill ≤
+   72.5). Implemented as `--tools-routed`: executor fires only for
+   line-intersection / crossing / mixed.
+2. **Maverick redo with the noTools fallback** (gateway deployment 405s on
+   function calling; answers via trailing "ANSWER: {json}", disclosed as a
+   format difference, same grader). Predictions unchanged: plain textmap
+   42-52 vs json 30-40; pipeline +4..+10.
+3. **London pipeline cell** (fresh seeds 4000+, n=20): paired plain
+   baseline predicted textmap 42-50 vs json 38-46 (mirroring
+   certify-london); CAT+routed-tools predicted 58-70. **Claim: the
+   engineered-reading pipeline transfers across morphology. Kill: pipeline
+   ≤ plain London textmap ⇒ the pipeline is NYC-specific — reported.**
+4. **Phoenix pair** (third morphology: low-density sprawl; seeds 5000+,
+   n=20, plain arms): predicted textmap > json by +3..+15 (wide — suburban
+   density changes question difficulty). Kill: json > phoenix textmap ⇒
+   morphology-dependence reported prominently.
+
+Budget note, disclosed: chain 2 actual = ~$98 vs ~$69 estimated
+(estimate-miss #3: scale-sweep JSON prompts at 19k tokens × 200 and
+3-call tools items were under-modeled). Chain 3 (~$28) awaits a final
+gateway top-up; nothing fires into a $9.76 balance.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and

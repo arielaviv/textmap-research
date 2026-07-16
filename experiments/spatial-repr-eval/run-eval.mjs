@@ -65,6 +65,7 @@ const turns = Number(arg("turns", "1"));
 const scan = process.argv.includes("--scan");
 const scanTargets = process.argv.includes("--scan-targets");
 const tools = process.argv.includes("--tools");
+const toolsRouted = process.argv.includes("--tools-routed");
 const extents = process.argv.includes("--extents");
 const rings = process.argv.includes("--rings");
 const citations = process.argv.includes("--citations");
@@ -111,6 +112,7 @@ async function main() {
       ...(scan ? { scan: true } : {}),
       ...(scanTargets ? { scanTargets: true } : {}),
       ...(tools ? { tools: true } : {}),
+      ...(toolsRouted ? { toolsRouted: true } : {}),
       ...(extents ? { extents: true } : {}),
       ...(rings ? { rings: true } : {}),
       ...(citations ? { citations: true } : {}),
