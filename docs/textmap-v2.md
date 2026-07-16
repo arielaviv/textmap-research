@@ -802,6 +802,30 @@ categories, reported as such.** If it lands, the paper's pipeline story
 becomes: reading protocol closes the extraction gap (46→59.5 = verdict
 ceiling), the executor breaks it (59.5 → ~75), each mechanism labeled.
 
+**RESULT (2026-07-17, results/tools-validation, n=200 fresh seeds):
+composite 72.5 — band HIT. The verdict ceiling (61.5) is BROKEN: +26.5
+over plain textmap, +13.0 over CAT.** Per category vs CAT, the pattern is
+the extraction-vs-compute theory in one table: compute-bound categories
+transform (line-intersection 0→90, crossing 35→60, mixed 36.7→63.3);
+read-bound categories REGRESS (containment 100→70, path 55→35, on-street
+100→85) — the legend already precomputes those (inside=, serves=,
+d_street=) and the blanket tool round tempts the model into recomputing
+what it should read, on self-marshaled inputs. Blockage ≥80 ✓ (90);
+crossing 50-70 ✓ (60). Cost: 49.8k in-tok/item (vs 31.5k CAT), 0%
+hallucinated ids.
+
+**Tool-routing validation — pre-registered before the run, derived from
+the error analysis above (disclosed; same category-keyed principle as
+scan-targets, not per-cell cherry-picking):** the tool round fires ONLY
+for compute-bound categories (line-intersection, crossing, mixed);
+read-bound categories (containment, coverage, nearest, on-street, path)
+keep CAT behavior with NO tool round. Same fresh seeds 2000-2019 (paired
+head-to-head with both parent recipes), haiku, n=200, ~$9.
+**Predictions: composite 75-82; containment/on-street/nearest restored to
+their CAT levels (≥95); compute categories hold their tools levels
+(line-int ≥80, crossing ≥50, mixed ≥55). Kill: composite ≤ 72.5 ⇒ routing
+adds nothing over blanket tools; blanket stays the recipe.**
+
 ## Night batch 2026-07-16/17 — pre-registered BEFORE any run ($100 top-up)
 
 All runs below fire sequentially after the scale-up chain completes. Fable 5
