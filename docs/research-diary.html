@@ -587,6 +587,18 @@ remains verified-by-val-loss (0.089) and safely downloaded locally.</p>
 total: ≈$70 Anthropic + $339 gateway + $15.20 Together training +
 ~$3 endpoints ≈ <strong>$427 all-in, self-funded.</strong> Prediction-miss count: 11,
 all published. Incident count: 12, all documented.</p>
+<h2>2026-07-17 midday — The serving mystery SOLVED: weights verified trained, platform bug confirmed</h2>
+<p>Third deployment (via the successful HF-&gt;Together import) served the SAME
+word-for-word base output. Decisive test, no GPU needed: byte comparison
+of tensors via HTTP Range against a stock Llama-3.1-8B mirror —
+<strong>LoRA-target q_proj DIFFERS from base; non-target layernorm is
+byte-IDENTICAL</strong> — the exact signature of a correct LoRA merge.
+Conclusion: GeoGlyph-8B is trained and correctly merged; Together's
+dedicated serving supplied base weights on all three attempts (the shared
+serving config cr_Cd35... appears to bind its own weights). Evidence added
+to the support ticket. Eval path pivots to HF Inference Endpoints
+(~$2-3 total, API-managed) pending user billing setup. The no-system-
+prompt fingerprint gate saved three would-have-been-corrupted eval runs.</p>
 <h2>Standing integrity rules (accumulated)</h2>
 <ol>
 <li>Predictions pre-registered in textmap-v2.md BEFORE every run; kill
