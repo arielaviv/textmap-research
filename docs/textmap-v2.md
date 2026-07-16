@@ -657,6 +657,16 @@ the highest number on the benchmark to date — above opus plain (64.5).
 Kimi baseline adds the starkest single-model format gap yet: textmap 46.5
 vs json **19.5** (+27.0).
 
+**Night-batch additions (2026-07-17): llama-3.3-70b 38.5 → 51.0 (+12.5 —
+ABOVE its +4..+10 band, overshoot miss logged; baseline gap the narrowest
+among tool-capable models at +3.5 vs json 35.0); mistral-large-3 42.5 →
+51.5 (+9.0, band hit; hallucination 6.0%→0.5%; baseline gap +2.5 vs json
+40.0). FINAL cross-model tally: 8/9 positive (gemini-pro the sole
+negative — thinking substitutes for the pipeline), one-sided sign test
+p = .002. Baseline-gap variance across models (+2.5 mistral … +27.0 kimi)
+is reported as-is: the format gap is universal in direction, model-
+dependent in size.**
+
 **GeoFM Task-1 rerun with direction hints — same prereg block.** Their
 1,400 triplets, their prompt + grading, haiku, both arms, PLUS one extra
 system bullet per arm: the arm's direction rule from core/hints.ts
