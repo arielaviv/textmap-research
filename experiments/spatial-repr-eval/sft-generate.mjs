@@ -35,6 +35,11 @@ function arg(name, fallback) {
 const url = arg("url", "http://localhost:3377").replace(/\/$/, "");
 const N_SYNTH = Number(arg("synth", "240"));
 const N_REAL = Number(arg("real", "60"));
+// Seed bases are FLAGS so dataset generations never silently overlap:
+// v1 = 50000/51000 (defaults); v2 additions = 52000/53000 (prereg E2).
+const SYNTH_BASE = Number(arg("synth-base", "50000"));
+const REAL_BASE = Number(arg("real-base", "51000"));
+const OUT_DIR = arg("out", "sft-data");
 const secret = process.env.EVAL_SECRET ?? "";
 
 // ---------------------------------------------------------------------------
@@ -254,11 +259,11 @@ async function main() {
   let gradeFails = 0;
   const specs = [
     ...Array.from({ length: N_SYNTH }, (_, i) => ({
-      seed: 50000 + i,
+      seed: SYNTH_BASE + i,
       source: "synthetic",
       blocks: 2 + (i % 3), // 2..4 — size variety
     })),
-    ...Array.from({ length: N_REAL }, (_, i) => ({ seed: 51000 + i, source: "real", city: "nyc" })),
+    ...Array.from({ length: N_REAL }, (_, i) => ({ seed: REAL_BASE + i, source: "real", city: "nyc" })),
   ];
 
   let done = 0;
@@ -305,9 +310,9 @@ async function main() {
   const val = rows.filter((_, i) => i % 50 === 0);
   const train = rows.filter((_, i) => i % 50 !== 0);
 
-  mkdirSync("sft-data", { recursive: true });
-  writeFileSync("sft-data/train.jsonl", train.map((r) => JSON.stringify(r)).join("\n"), "utf8");
-  writeFileSync("sft-data/val.jsonl", val.map((r) => JSON.stringify(r)).join("\n"), "utf8");
+  mkdirSync(OUT_DIR, { recursive: true });
+  writeFileSync(`${OUT_DIR}/train.jsonl`, train.map((r) => JSON.stringify(r)).join("\n"), "utf8");
+  writeFileSync(`${OUT_DIR}/val.jsonl`, val.map((r) => JSON.stringify(r)).join("\n"), "utf8");
 
   const chars = rows.reduce((n, r) => n + r.messages.reduce((m, x) => m + x.content.length, 0), 0);
   console.log(`\nscenes ok: ${done}/${specs.length}  grade-fails skipped: ${gradeFails}`);
