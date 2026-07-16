@@ -1119,6 +1119,16 @@ Trained on Llama-3.1-8B (GeoGlyph-8B-v2) AND gpt-oss-20B (GeoGlyph-20B,
 OptiMind base parity, 3.6B active). 2 epochs. Serving = the proven
 HF-A100-TGI runbook (docs/sft-runbook.md).
 
+**Dataset built + validated (2026-07-17):** 11,401 train + 1,800 val
+examples, ~39.5M tokens (subsampled from a 88k/310M generation to fit the
+$200 Together budget — cost-management disclosed, not cherry-picking:
+uniform random subsample preserves all distributions). Balanced json 5740
+/ textmap 5661; 4,447 tool-trace examples (compute categories, 2× over-
+sampled); feeds= + FOOTPRINTS rings on every textmap example; 6+ distinct
+phrasings per question (diversity fix); 100% of ANSWER lines parse; oracle
+labels self-checked (0 grade-fails). Planned: 8B-v2 2 epochs (~$66), 20B
+1 epoch (~$99).
+
 **Predictions (committed before training): v2-8B core 62-72, v2-8B
 hold-out gap RESTORED to ≥+5 (kill: still 0 ⇒ diversity insufficient,
 reported), v2-8B + tools 70-80; v2-20B core 72-82, v2-20B + tools 78-86.
