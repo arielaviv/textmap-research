@@ -669,6 +669,21 @@ textmap+hint beats wkt+hint by +2 to +6. Kill: textmap+hint still below
 wkt+hint ⇒ direction was not the bottleneck; reported as a stable loss.**
 Est. ≈ $8.
 
+**RESULT (2026-07-17, results/geofm-task1-hint, $8.57): THE BOUNDARY
+FLIPS — textmap 61.9 > wkt 58.4 (+3.5, inside the predicted +2..+6).**
+Per predicate: textmap contains 18→55 (band floor hit), within 71,
+disjoint 98, equals 92 — the direction inversion is resolved by ONE
+reading-protocol line, symmetric help given to both arms (wkt's own hint
+lifted its contains 59→71 but netted −0.5 overall). Two calibration
+notes, published: textmap overall 61.9 vs predicted 62-68 (0.1 below the
+floor — counted as a band miss, #6); wkt 58.4 vs predicted 59-63 (0.6
+below, #7). The external-validity story is now clean: plain textmap LOST
+their benchmark (kill invoked, direction diagnosed); one disclosed,
+symmetric reading rule flips it — and haiku+textmap (61.9) lands within a
+point of THEIR GPT-4 zero-shot baseline (62.8) at a fraction of the cost.
+Crosses/touches stay weak for both arms (raster + vertex reading limits) —
+reported, not hidden.
+
 ## Geometry-tools arm (function-args design) — probe pre-registered 2026-07-16
 
 The verdict ceiling (haiku handed precomputed answers = 61.5) proves the
