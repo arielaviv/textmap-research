@@ -1031,6 +1031,22 @@ cell the sniff cannot separate "pipeline stacks" from "fable internalizes
 the pipeline" (the gemini pattern); the two-cell headline design
 (+geojson-plain) resolves the baseline side later.
 
+**RESULT (results/fable-sniff, n=50, $30): composite 78.0
+[64.8, 87.2] — 2 points BELOW the band floor (miss #10); kill avoided;
+the CI spans both readings.** Cost as estimated. Two findings inside:
+(1) **at full stack, fable ≈ haiku (78.0 vs 75.5, overlapping CIs)** —
+the gemini insight at the frontier: the SYSTEM carries the performance;
+representation + pipeline + executor equalize a $1/M model with the
+strongest model available. This is the cheap-model claim at maximum
+strength, and arguably a better headline than 87 would have been.
+(2) Per-category (n=5 each, wide CIs): **fable's path = 80 where haiku's
+stack gets 25-40** — frontier reasoning bridges the unstated homing
+convention that no legal prompt fix could; its drag is mixed 53 /
+crossing 40 (noise-sized samples). The composites match; the failure
+surfaces differ. A full n=20 fable cell + the geojson-plain contrast
+remain the optional $250-tier cells; seeds 2000-2004 here extend into
+them without re-payment.
+
 ## Integrity boundary
 
 Everything in v2 encodes the world, not the answers: layers, spacing, and
