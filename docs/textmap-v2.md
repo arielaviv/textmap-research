@@ -1000,6 +1000,16 @@ remains eval-only, never trained on.
    density changes question difficulty). Kill: json > phoenix textmap ⇒
    morphology-dependence reported prominently.
 
+   **RESULT (n=130 — 13/20 AOIs buildable, sparse seeds skipped): textmap
+   51.5 vs json 50.8. +0.7 is BELOW the band (miss #9); kill not
+   triggered. Both arms score their highest plain numbers anywhere — the
+   morphology is easy for everyone. Paper finding: the plain-format gap
+   is DENSITY-DEPENDENT (dense urban +8.3..+27, sparse sprawl ~0);
+   textmap never loses, and its advantage concentrates exactly where maps
+   are hard. (The pipeline's value on sparse scenes is untested —
+   deliberately not run; the plain tie already answers the reviewer
+   question this city was added for.)**
+
 Budget note, disclosed: chain 2 actual = ~$98 vs ~$69 estimated
 (estimate-miss #3: scale-sweep JSON prompts at 19k tokens × 200 and
 3-call tools items were under-modeled). Chain 3 (~$28) awaits a final
