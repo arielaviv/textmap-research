@@ -101,6 +101,14 @@ export function WorkspaceTab({
   // the structured data (no map). Flip between "text" and "data" to A/B whether
   // the textual representation helps on a given question.
   const [mode, setMode] = useState<"all" | "text" | "data">("all");
+  // Full-pipeline mode (default off): the agent runs the real 75.5 machinery —
+  // textmap-v2 gains FOOTPRINTS (exact rings) + `feeds=` homing, and a `geo`
+  // executor tool computes planar geometry on the coordinates it reads. Off keeps
+  // the plain DataStore agent untouched.
+  const [pipeline, setPipeline] = useState(false);
+  // Whether the self-hosted GeoGlyph SFT endpoint is configured server-side
+  // (reported by the seed route). Gates the SFT entry in the model selector.
+  const [sftAvailable, setSftAvailable] = useState(false);
   // Full Anthropic transcript (incl. tool blocks) for cross-turn memory; the
   // route returns the updated array and we replay it next turn. `msgs` is just
   // for display.
@@ -126,9 +134,14 @@ export function WorkspaceTab({
         body: JSON.stringify(sceneBody),
       });
       if (!r.ok) throw new Error(await r.text());
-      const data = (await r.json()) as { files: Record<string, string>; image: string | null };
+      const data = (await r.json()) as {
+        files: Record<string, string>;
+        image: string | null;
+        sftAvailable?: boolean;
+      };
       setFiles(data.files);
       setImage(data.image);
+      setSftAvailable(Boolean(data.sftAvailable));
       setSelected(data.files["textmap.txt"] ? "textmap.txt" : orderedFiles(data.files)[0]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -151,6 +164,7 @@ export function WorkspaceTab({
         body: JSON.stringify({
           files: agentFiles,
           mode,
+          pipeline,
           model,
           messages: nextTranscript,
         }),
@@ -231,6 +245,17 @@ export function WorkspaceTab({
               <option value="text">text maps only</option>
               <option value="data">data only (no map)</option>
             </select>
+          </label>
+          <label
+            className="flex items-center gap-1 text-xs text-zinc-600"
+            title="Run the real 75.5 pipeline: textmap-v2 gains FOOTPRINTS (exact building rings) + feeds= homing, and the agent gets a geo executor tool for exact planar geometry (crossings, distances, containment). Default off keeps the plain DataStore agent."
+          >
+            <input
+              type="checkbox"
+              checked={pipeline}
+              onChange={(e) => setPipeline(e.target.checked)}
+            />
+            full pipeline (rings + executor)
           </label>
           <button
             type="button"
@@ -357,7 +382,13 @@ export function WorkspaceTab({
               (cheap vs frontier). Switching clears the chat (transcript formats). */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-600">model</span>
-            <ModelSelect value={model} onChange={onModelChange} size="lg" className="flex-1" />
+            <ModelSelect
+              value={model}
+              onChange={onModelChange}
+              size="lg"
+              className="flex-1"
+              sftAvailable={sftAvailable}
+            />
           </div>
           <div className="flex gap-2">
             <input
