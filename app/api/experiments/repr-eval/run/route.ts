@@ -70,6 +70,7 @@ interface RunBody {
   scanTargets?: boolean; // category-aware extraction briefs for path/on-street (with scan)
   tools?: boolean; // geometry-tools arm: batch function-args round (core/geo-tools.ts)
   toolsRouted?: boolean; // tool round only for compute-bound categories
+  selfCorrect?: boolean; // executor-verified self-correct loop for the tool round
   extents?: boolean; // v2.7: building footprint bboxes (ext=) in the textmap legend
   rings?: boolean; // v2.8: FOOTPRINTS section with exact outline vertices (meters)
   feeds?: boolean; // v2.7: homing topology (feeds=) on the source row
@@ -163,6 +164,7 @@ export async function POST(req: Request) {
     scanTargets: body.scanTargets ?? false,
     tools: body.tools ?? false,
     toolsRouted: body.toolsRouted ?? false,
+    selfCorrect: body.selfCorrect ?? false,
     extents: body.extents ?? false,
     rings: body.rings ?? false,
     feeds: body.feeds ?? false,
@@ -191,6 +193,7 @@ export async function POST(req: Request) {
       scanTargets: body.scanTargets ?? false,
       tools: body.tools ?? false,
       toolsRouted: body.toolsRouted ?? false,
+      selfCorrect: body.selfCorrect ?? false,
       extents: body.extents ?? false,
       rings: body.rings ?? false,
       feeds: body.feeds ?? false,

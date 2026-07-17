@@ -66,6 +66,7 @@ const scan = process.argv.includes("--scan");
 const scanTargets = process.argv.includes("--scan-targets");
 const tools = process.argv.includes("--tools");
 const toolsRouted = process.argv.includes("--tools-routed");
+const selfCorrect = process.argv.includes("--self-correct");
 const extents = process.argv.includes("--extents");
 const rings = process.argv.includes("--rings");
 const feeds = process.argv.includes("--feeds");
@@ -114,6 +115,7 @@ async function main() {
       ...(scanTargets ? { scanTargets: true } : {}),
       ...(tools ? { tools: true } : {}),
       ...(toolsRouted ? { toolsRouted: true } : {}),
+      ...(selfCorrect ? { selfCorrect: true } : {}),
       ...(extents ? { extents: true } : {}),
       ...(rings ? { rings: true } : {}),
       ...(feeds ? { feeds: true } : {}),

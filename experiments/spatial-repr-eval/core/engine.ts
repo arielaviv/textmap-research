@@ -10,7 +10,7 @@ import { hintFor } from "./hints";
 import { askedMissingInfo, hallucinatedIds } from "./metrics";
 import { askModel } from "./model";
 import { isVisionModel, modelInfo } from "./models";
-import { ALL_QUESTIONS, type Answer, type Category, QUESTIONS } from "./questions";
+import { ALL_QUESTIONS, type Answer, type Category, type Question, QUESTIONS } from "./questions";
 import { buildRepresentations, type RepresentationBundle } from "./representations";
 import type { Scene } from "./scene";
 
@@ -66,6 +66,12 @@ export interface EvalConfig {
   /** Category-routed tools: the tool round fires ONLY for compute-bound
    *  categories (TOOL_CATEGORIES); read-bound categories keep pure reading. */
   toolsRouted?: boolean;
+  /** Executor-verified self-correct loop for the tool round: retry the tool
+   *  request (up to min(turns,4)) with feedback whenever the verifier is
+   *  unsatisfied. The verifier uses ONLY legitimate signals — tool-call
+   *  well-formedness and a coverage bound from the scene's OWN entity counts —
+   *  NEVER the oracle, grade, true answer, or planted facts. */
+  selfCorrect?: boolean;
   /** v2.7 labeled artifact revision: building footprint bounding boxes
    *  (`ext=` meters) in the textmap legend — exact inputs for the tools arm. */
   extents?: boolean;
@@ -155,6 +161,30 @@ const SCAN_TARGETS: Partial<Record<Category, string>> = {
  *  the executor transforms results (line-intersection 0→90, crossing 35→60,
  *  mixed 36.7→63.3) while read-bound categories regressed under blanket tools. */
 const TOOL_CATEGORIES = new Set<Category>(["line-intersection", "crossing", "mixed"]);
+
+/** Count parseable geometry tool lines (mirrors geo-tools' lenient parser). */
+function countToolOps(raw: string): number {
+  let n = 0;
+  for (const r of raw.split("\n")) {
+    const line = r.trim().replace(/^```(json)?|```$/g, "");
+    if (!line.startsWith("{")) continue;
+    try {
+      const o = JSON.parse(line) as { op?: unknown };
+      if (o && typeof o === "object" && typeof o.op === "string") n++;
+    } catch {
+      /* ignore */
+    }
+  }
+  return n;
+}
+
+/** Minimum tool calls the scene warrants — a COMPLETENESS bound from entity
+ *  counts, never the answer. crossing needs one segment test per cable; other
+ *  categories only need well-formedness (>=1). */
+function minToolOps(q: Question, scene: Scene): number {
+  if (q.category === "crossing") return Math.max(1, scene.cables.length);
+  return 1;
+}
 
 /** Canonical answer key for majority voting: array fields sorted, metadata
  *  dropped, so semantically-equal answers vote together. */
@@ -372,34 +402,62 @@ export async function runEval(
       // Tool round: the model reads coordinates out of the representation and
       // requests planar computations; pure math runs on exactly what it
       // supplied (a misread coordinate yields an honestly-computed wrong
-      // number — the executor never sees the scene).
-      const toolRes = await askModel({
-        apiKey: config.apiKey,
-        model: t.model,
-        temperature: config.temperature,
-        representation: rep,
-        question:
-          "Do NOT answer yet. Decide which geometry computations the question below needs, " +
-          "read every required coordinate from the representation, and reply with ONLY JSON " +
-          "tool lines.\n" +
-          GEO_TOOLS_SPEC +
-          `\n\nQUESTION (for context only):\n${q.prompt(t.scene)}`,
-        freeText: true,
-        // Ring marshaling can be ~10× a scan's output — its own budget, so
-        // scan/answer budgets stay untouched everywhere (probe 3 truncation).
-        maxTokensOverride: 6000,
-      });
-      inputTokens += toolRes.inputTokens;
-      outputTokens += toolRes.outputTokens;
-      latencyMs += toolRes.latencyMs;
-      const toolResults = toolRes.rawText ? executeGeoToolLines(toolRes.rawText) : null;
+      // number — the executor never sees the scene). With config.selfCorrect,
+      // the round retries when the verifier is unsatisfied. The verifier uses
+      // ONLY legitimate signals — tool-call well-formedness and a coverage
+      // bound from the scene's OWN entity counts — NEVER the oracle, grade,
+      // true answer, or planted facts.
+      const toolPrompt =
+        "Do NOT answer yet. Decide which geometry computations the question below needs, " +
+        "read every required coordinate from the representation, and reply with ONLY JSON " +
+        "tool lines.\n" +
+        GEO_TOOLS_SPEC +
+        `\n\nQUESTION (for context only):\n${q.prompt(t.scene)}`;
+      const maxToolTurns = config.selfCorrect ? Math.min(Math.max(config.turns ?? 1, 1), 4) : 1;
+      let toolFeedback = "";
+      let toolResults: string | null = null;
+      let lastRaw = "";
+      for (let tt = 0; tt < maxToolTurns; tt++) {
+        const toolRes = await askModel({
+          apiKey: config.apiKey,
+          model: t.model,
+          temperature: config.temperature,
+          representation: rep,
+          question: toolFeedback ? `${toolPrompt}\n\n${toolFeedback}` : toolPrompt,
+          freeText: true,
+          // Ring marshaling can be ~10× a scan's output — its own budget, so
+          // scan/answer budgets stay untouched everywhere (probe 3 truncation).
+          maxTokensOverride: 6000,
+        });
+        inputTokens += toolRes.inputTokens;
+        outputTokens += toolRes.outputTokens;
+        latencyMs += toolRes.latencyMs;
+        lastRaw = toolRes.rawText ?? "";
+        toolResults = lastRaw ? executeGeoToolLines(lastRaw) : null;
+        if (!config.selfCorrect) break;
+        const nOps = countToolOps(lastRaw);
+        const need = minToolOps(q, t.scene);
+        if (nOps === 0) {
+          toolFeedback =
+            "Your reply contained no valid geometry tool lines. This question REQUIRES computation — " +
+            "reply with ONLY JSON tool lines (one per computation), reading exact coordinates from the map.";
+          continue;
+        }
+        if (need > 1 && nOps < Math.ceil(need * 0.6)) {
+          toolFeedback =
+            `You emitted ${nOps} tool call(s), but this scene has ${need} item(s) that each need a ` +
+            "separate check. Test EVERY one — re-read the map and emit a tool line per item.";
+          continue;
+        }
+        break; // verifier satisfied
+      }
       if (toolResults) {
-        toolsText = `REQUESTS:\n${toolRes.rawText}\n\nRESULTS:\n${toolResults}`;
+        toolsText = `REQUESTS:\n${lastRaw}\n\nRESULTS:\n${toolResults}`;
         baseQuestion +=
           "\n\nGEOMETRY TOOL RESULTS (computed exactly from the coordinates YOU supplied in " +
           `your tool requests — trust these numbers over mental arithmetic):\n${toolResults}`;
-      } else if (toolRes.rawText) {
-        toolsText = `REQUESTS (no valid tool lines):\n${toolRes.rawText}`;
+      } else if (lastRaw) {
+        toolsText = `REQUESTS (no valid tool lines):\n${lastRaw}`;
       }
     }
 
