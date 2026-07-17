@@ -14,6 +14,7 @@ import { MODELS, modelInfo } from "@/experiments/spatial-repr-eval/core/models";
 const CUSTOM = "__custom__";
 
 function vendorOf(id: string): string {
+  if (modelInfo(id).provider === "sft") return "sft";
   return id.includes("/") ? id.split("/")[0] : "anthropic";
 }
 
@@ -23,6 +24,7 @@ const VENDOR_LABELS: Record<string, string> = {
   google: "Google (gateway)",
   moonshotai: "Moonshot (gateway)",
   deepseek: "DeepSeek (gateway)",
+  sft: "GeoGlyph SFT (self-hosted)",
 };
 
 export function ModelSelect({
@@ -30,12 +32,16 @@ export function ModelSelect({
   onChange,
   size = "md",
   className = "",
+  sftAvailable = false,
 }: {
   value: string;
   onChange: (id: string) => void;
   /** "lg" = the prominent chat-input variant. */
   size?: "md" | "lg";
   className?: string;
+  /** Self-hosted SFT endpoint configured (HF_SFT_URL + HF_TOKEN). When false the
+   *  SFT entries are disabled/greyed — the route refuses to call HF anyway. */
+  sftAvailable?: boolean;
 }) {
   const registered = MODELS.some((m) => m.id === value);
   const [customMode, setCustomMode] = useState(!registered);
@@ -69,12 +75,17 @@ export function ModelSelect({
       >
         {vendors.map((v) => (
           <optgroup key={v} label={VENDOR_LABELS[v] ?? `${v} (gateway)`}>
-            {MODELS.filter((m) => vendorOf(m.id) === v).map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-                {m.vision ? "" : " · no vision"}
-              </option>
-            ))}
+            {MODELS.filter((m) => vendorOf(m.id) === v).map((m) => {
+              const isSft = modelInfo(m.id).provider === "sft";
+              const disabled = isSft && !sftAvailable;
+              return (
+                <option key={m.id} value={m.id} disabled={disabled}>
+                  {m.label}
+                  {m.vision ? "" : " · no vision"}
+                  {disabled ? " · needs HF endpoint" : ""}
+                </option>
+              );
+            })}
           </optgroup>
         ))}
         <option value={CUSTOM}>custom (any provider/model id)…</option>

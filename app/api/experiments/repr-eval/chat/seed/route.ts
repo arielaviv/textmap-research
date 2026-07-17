@@ -68,5 +68,8 @@ export async function POST(req: Request) {
 
   const files = sceneToFiles(scene);
   const image = await renderImageFromFiles(files);
-  return NextResponse.json({ files, image });
+  // Whether the GeoGlyph SFT endpoint is configured — the UI greys the selector
+  // entry when false, and the chat route refuses to call HF when unset.
+  const sftAvailable = Boolean(process.env.HF_SFT_URL && process.env.HF_TOKEN);
+  return NextResponse.json({ files, image, sftAvailable });
 }

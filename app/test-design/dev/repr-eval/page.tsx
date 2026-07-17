@@ -540,7 +540,9 @@ export default function ReprEvalPage() {
           </div>
           <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
             <span className="text-zinc-600">models:</span>
-            {MODELS.map((m) => (
+            {/* SFT models are workspace-chat only (self-hosted, single-shot) —
+                never offered to the eval sweep. */}
+            {MODELS.filter((m) => m.provider !== "sft").map((m) => (
               <label
                 key={m.id}
                 className="flex items-center gap-1 rounded border border-zinc-300 px-1.5 py-0.5"

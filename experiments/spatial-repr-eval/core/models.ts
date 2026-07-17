@@ -4,7 +4,7 @@
  * `vision` gates the image arm — text-only models simply don't get image tasks.
  */
 
-export type ModelProvider = "anthropic" | "gateway";
+export type ModelProvider = "anthropic" | "gateway" | "sft";
 
 export interface ModelInfo {
   id: string;
@@ -125,6 +125,12 @@ export const MODELS: ModelInfo[] = [
   { id: "meta/llama-3.3-70b", label: "llama-3.3-70b", provider: "gateway", vision: false },
   { id: "mistral/mistral-large-3", label: "mistral-large-3", provider: "gateway", vision: false },
   { id: "deepseek/deepseek-chat", label: "deepseek-chat", provider: "gateway", vision: false },
+  // GeoGlyph SFT v1 — a self-hosted Llama-3.1-8B fine-tune served via an HF TGI
+  // endpoint (Llama-3.1 chat template, /generate). Env-gated in the chat route
+  // (HF_SFT_URL + HF_TOKEN); disabled in the UI and never called when unset, so
+  // nothing spins up an endpoint. Kept OUT of the eval sweep (BENCHMARK_MODELS
+  // filters provider "sft") — the workspace chat is its only surface.
+  { id: "geoglyph-8b-v1", label: "geoglyph-8b sft v1", provider: "sft", vision: false },
 ];
 
 const BY_ID = new Map(MODELS.map((m) => [m.id, m]));
@@ -150,5 +156,8 @@ export function isVisionModel(id: string): boolean {
   return modelInfo(id).vision;
 }
 
-/** Default benchmark set — every registered model. */
-export const BENCHMARK_MODELS: string[] = MODELS.map((m) => m.id);
+/** Default benchmark set — every registered model EXCEPT self-hosted SFT
+ *  endpoints (those are workspace-chat only; the eval never calls them). */
+export const BENCHMARK_MODELS: string[] = MODELS.filter((m) => m.provider !== "sft").map(
+  (m) => m.id,
+);
