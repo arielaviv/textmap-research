@@ -54,11 +54,14 @@ export const HINTS: Record<string, Hint> = {
   // +35 when the GEOMETRY vs TOPOLOGY protocol line was added; residual
   // failures still show glyph-traced orderings).
   topology: {
-    byArm: {
-      textmap2:
-        "Do not trace cable glyphs. Build the chain ONLY from the legend: the building's " +
-        "serving closure (serves=), then the CABLES section source -> target links up to the CO.",
-    },
+    generic:
+      "Answer from the LEGEND only — never the grids and never the CABLES section (cables are " +
+      "geometry and may include decoy closure-to-closure links that are NOT the homing path; " +
+      "there is no cable from a closure to the source). The FIRST (nearest) item is the closure " +
+      "that serves the target building: its served_by= field, or the closure whose serves= list " +
+      "contains the building. Then home to the source: follow that device's up= field (or, if " +
+      "absent, the CO row's feeds= list) until you reach the source (kind=co, marker *), which " +
+      "is the LAST item. Fill equipmentPath in that order — equipment ids only, never cable ids.",
   },
 
   // Error: both arms name 1–3 wrong buildings (blockage wrong=58 per arm,
@@ -88,6 +91,55 @@ export const HINTS: Record<string, Hint> = {
         "Direction rule: A contains B when all of B's vertices lie inside/on A and A extends " +
         "beyond B. A is within B in the reverse case. Verify which geometry is larger before " +
         "choosing contains vs within.",
+    },
+  },
+
+  // Error: models add an equipment item to avoid an empty answer, and
+  // re-derive containment from the grid instead of trusting the legend's
+  // exact inside= field.
+  containment: {
+    generic:
+      "Check EVERY equipment item, including the CO. An item counts only if its point lies " +
+      "inside a building footprint. If none do, the correct answer is an empty array — empty " +
+      "is a real and common answer here; do not add an item just to avoid returning nothing.",
+    byArm: {
+      textmap2:
+        "Read the inside= field on every equipment row of the LEGEND (the CO row has one too). " +
+        "Include an id ONLY when its inside= names a building; skip every inside=none. inside= " +
+        "is exact — do not re-derive containment from the grid or from x=/y=.",
+    },
+  },
+
+  // Error: models treat a street NAME attached to equipment as an
+  // on-street placement claim; on-street is a distance threshold, not a
+  // name association.
+  onstreet: {
+    generic:
+      "On-street means within 8m of a street centerline. Judge this ONLY by the measured " +
+      "distance to the nearest street. Having a street name attached, or being 'near' a named " +
+      "street, does NOT make something on-street.",
+    byArm: {
+      textmap2:
+        "Use ONLY d_street= on that equipment's LEGEND row: on-street is TRUE iff d_street <= " +
+        "8m, FALSE otherwise. IGNORE on= for this question — on= names the nearest NAMED street " +
+        "no matter how far away it is (an identity label, not a placement claim). d_street is " +
+        "the exact placement distance; compare it to 8.",
+    },
+  },
+
+  // Error: models eyeball the map picture for the nearest closure instead
+  // of computing from coordinates, and include cabinets/CO in the search.
+  nearest: {
+    generic:
+      "Compare the target building's distance to EVERY closure (not cabinets, not the CO) and " +
+      "return the smallest. Compute from the building's own coordinates; do not guess from the " +
+      "map picture.",
+    byArm: {
+      textmap2:
+        "The building's LEGEND row carries d_closure= — the exact distance in meters to its " +
+        "nearest closure. Compute each closure's distance from the building's x=,y= (planar: " +
+        "sqrt(dx^2 + dy^2), same meter frame), then return the closure whose distance matches " +
+        "d_closure. Consider only rows whose kind is closure.",
     },
   },
 };
