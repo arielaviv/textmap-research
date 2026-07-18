@@ -122,7 +122,10 @@ export const GEO_TOOLS_SPEC =
   '{"op":"point_in_polygon","units":"m","p":[x,y],"ring":[[x,y],...]}\n' +
   '{"op":"segment_intersects_polygon","units":"m","a":[x,y],"b":[x,y],"rings":{"ID1":[[x,y],...],"ID2":[[x,y],...]}}\n' +
   '{"op":"midpoint","units":"m","a":[x,y],"b":[x,y]}\n' +
-  '{"op":"convex_hull","units":"m","points":{"ID1":[x,y],"ID2":[x,y],...}}';
+  '{"op":"convex_hull","units":"m","points":{"ID1":[x,y],"ID2":[x,y],...}}\n' +
+  '{"op":"segments_cross_polygons","units":"m","segments":{"CID1":{"a":[x,y],"b":[x,y],"exclude":["BID"]},...},"rings":{"BID1":[[x,y],...],...}}\n' +
+  '{"op":"filter_threshold","cmp":"le","threshold":2,"values":{"CL-A":1.4,"CB-2":7.1,...}}\n' +
+  '{"op":"nearest_where","units":"m","target":[x,y],"exclude_field":"street","exclude_value":"Maple Ave","candidates":{"CL-A":{"xy":[x,y],"street":"Oak St"},...}}';
 
 function isPt(v: unknown): v is Pt {
   return Array.isArray(v) && v.length >= 2 && Number.isFinite(v[0]) && Number.isFinite(v[1]);
@@ -186,6 +189,121 @@ function execLine(obj: BaseLine & Record<string, unknown>): string {
       return `hull: [${hull.map((i) => ids[i]).join(", ")}]  interior: [${ids
         .filter((_, i) => !hull.includes(i))
         .join(", ")}]`;
+    }
+    case "segments_cross_polygons": {
+      // Batch crossing: every cable segment vs every building ring, minus each
+      // segment's own exclusions. Marshals all rings ONCE into a shared planar
+      // frame (one refLat) so segments and rings never drift apart under lnglat.
+      const segments = obj.segments;
+      const rings = obj.rings;
+      if (typeof segments !== "object" || segments === null)
+        return "ERROR: segments_cross_polygons needs segments:{ID:{a,b,exclude}}";
+      if (typeof rings !== "object" || rings === null)
+        return "ERROR: segments_cross_polygons needs rings:{ID:[[x,y],...]}";
+      const segEntries = Object.entries(segments as Record<string, unknown>);
+      const ringEntries = Object.entries(rings as Record<string, unknown>);
+      if (segEntries.length === 0) return "ERROR: no segments supplied";
+      if (ringEntries.length === 0) return "ERROR: no rings supplied";
+      const flat: Pt[] = [];
+      const segMeta: { id: string; ai: number; bi: number; exclude: Set<string> }[] = [];
+      for (const [id, raw] of segEntries) {
+        if (typeof raw !== "object" || raw === null)
+          return `ERROR: segment ${id} must be {a:[x,y],b:[x,y],exclude:[...]}`;
+        const s = raw as Record<string, unknown>;
+        if (!isPt(s.a) || !isPt(s.b)) return `ERROR: segment ${id} needs a:[x,y], b:[x,y]`;
+        const exclude = new Set(
+          Array.isArray(s.exclude) ? s.exclude.filter((v): v is string => typeof v === "string") : [],
+        );
+        const ai = flat.length;
+        flat.push(s.a);
+        const bi = flat.length;
+        flat.push(s.b);
+        segMeta.push({ id, ai, bi, exclude });
+      }
+      const ringMeta: { id: string; start: number; len: number }[] = [];
+      for (const [id, ring] of ringEntries) {
+        if (!isPtArr(ring) || ring.length < 3) return `ERROR: ring ${id} needs >=3 valid points`;
+        ringMeta.push({ id, start: flat.length, len: ring.length });
+        for (const pt of ring) flat.push(pt);
+      }
+      const normed = norm(flat, units);
+      const out: string[] = [];
+      for (const sm of segMeta) {
+        const a = normed[sm.ai];
+        const b = normed[sm.bi];
+        const hits: string[] = [];
+        for (const rm of ringMeta) {
+          if (sm.exclude.has(rm.id)) continue;
+          if (segmentIntersectsRing(a, b, normed.slice(rm.start, rm.start + rm.len)))
+            hits.push(rm.id);
+        }
+        out.push(`${sm.id} -> crosses: [${hits.join(", ")}]`);
+      }
+      return out.join(" | ");
+    }
+    case "filter_threshold": {
+      // Enumerate + threshold over a value column. Deterministic pass/fail split;
+      // never sees the scene — only the model-supplied {id: number} map.
+      const cmp = obj.cmp;
+      const threshold = obj.threshold;
+      const values = obj.values;
+      if (cmp !== "le" && cmp !== "lt" && cmp !== "ge" && cmp !== "gt")
+        return "ERROR: filter_threshold needs cmp in {le,lt,ge,gt}";
+      if (typeof threshold !== "number" || !Number.isFinite(threshold))
+        return "ERROR: filter_threshold needs a numeric threshold";
+      if (typeof values !== "object" || values === null)
+        return "ERROR: filter_threshold needs values:{id:number}";
+      const pass: string[] = [];
+      const fail: string[] = [];
+      for (const [id, v] of Object.entries(values as Record<string, unknown>)) {
+        if (typeof v !== "number" || !Number.isFinite(v))
+          return `ERROR: value for ${id} must be a finite number`;
+        const ok =
+          cmp === "le" ? v <= threshold : cmp === "lt" ? v < threshold : cmp === "ge" ? v >= threshold : v > threshold;
+        (ok ? pass : fail).push(id);
+      }
+      return `{"pass":${JSON.stringify(pass)},"fail":${JSON.stringify(fail)},"n_in":${pass.length + fail.length},"n_pass":${pass.length}}`;
+    }
+    case "nearest_where": {
+      // Filter by a field value, then argmin distance to a target. The excluded
+      // value is a stated criterion, never the answer — the op returns the argmin
+      // over surviving candidates, computed on model-supplied coordinates only.
+      const target = obj.target;
+      const field = obj.exclude_field;
+      const exValueRaw = obj.exclude_value;
+      const candidates = obj.candidates;
+      if (!isPt(target)) return "ERROR: nearest_where needs target:[x,y]";
+      if (typeof field !== "string") return "ERROR: nearest_where needs exclude_field (string)";
+      if (typeof candidates !== "object" || candidates === null)
+        return "ERROR: nearest_where needs candidates:{id:{xy:[x,y],<field>:value}}";
+      const exValue = typeof exValueRaw === "string" ? exValueRaw : String(exValueRaw);
+      const entries = Object.entries(candidates as Record<string, unknown>);
+      if (entries.length === 0) return "ERROR: no candidates supplied";
+      const flat: Pt[] = [target];
+      const meta: { id: string; idx: number; field: string }[] = [];
+      const excluded: string[] = [];
+      for (const [id, raw] of entries) {
+        if (typeof raw !== "object" || raw === null)
+          return `ERROR: candidate ${id} must be {xy:[x,y],${field}:value}`;
+        const c = raw as Record<string, unknown>;
+        if (!isPt(c.xy)) return `ERROR: candidate ${id} needs xy:[x,y]`;
+        const fv = c[field];
+        const fieldVal = typeof fv === "string" ? fv : String(fv);
+        if (fieldVal === exValue) {
+          excluded.push(id);
+          continue;
+        }
+        meta.push({ id, idx: flat.length, field: fieldVal });
+        flat.push(c.xy);
+      }
+      const normed = norm(flat, units);
+      const t = normed[0];
+      const ranked = meta
+        .map((m) => ({ id: m.id, field: m.field, d: dist(t, normed[m.idx]) }))
+        .sort((x, y) => x.d - y.d);
+      const nearest = ranked.length ? ranked[0].id : "none";
+      const rankedStr = ranked.map((r) => `${r.id}(${r.field})=${r.d.toFixed(1)}`).join(", ");
+      return `nearest:${nearest} | ranked: ${rankedStr} | excluded:[${excluded.join(", ")}]`;
     }
     default:
       return `ERROR: unknown op '${String(obj.op)}'`;

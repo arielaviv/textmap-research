@@ -29,7 +29,7 @@
  */
 
 import { haversineMeters, pointInPolygon, pointToPolylineMeters } from "./geo";
-import { interiorBuildings } from "./oracle";
+import { interiorBuildings, nearestStreetName } from "./oracle";
 import type { Coord, Scene, SceneBounds, SceneBuilding } from "./scene";
 
 const GRID_W = 48;
@@ -634,6 +634,15 @@ export function toTextMapV2(
   };
 
   const buildingById = new Map(scene.buildings.map((b) => [b.id, b]));
+  // World-fact reverse lookups (question-agnostic, same class as inside=/hull=):
+  //   servedBy — the closure whose serves= list contains a building (inverse of
+  //   the printed serves=); sourceId — the source (kind=co) every non-source
+  //   device homes to in the current star model (up=).
+  const servedBy = new Map<string, string>();
+  for (const e of scene.equipment) {
+    for (const bid of e.serves) if (!servedBy.has(bid)) servedBy.set(bid, e.id);
+  }
+  const sourceId = scene.equipment.find((e) => e.kind === "co")?.id ?? "none";
   const lines: string[] = [];
   lines.push(
     `TEXT MAP v2 — two ALIGNED layers, one grid frame, north-up. 1 cell ≈ ${((mpcX + mpcY) / 2).toFixed(1)}m. ` +
@@ -689,7 +698,11 @@ export function toTextMapV2(
         : "") +
       (worldFacts
         ? "; hull= marks each building interior (its centroid lies inside the cluster's convex " +
-          "hull, off the boundary) or perimeter (its centroid is on the hull boundary)"
+          "hull, off the boundary) or perimeter (its centroid is on the hull boundary)" +
+          "; street= names the nearest street (the same identity the on= label uses) for both " +
+          "buildings and equipment; served_by= on a building names the closure whose serves= list " +
+          "contains it (none if unserved); up= on each non-source equipment names the device it " +
+          "homes to toward the source; terminates_in= on a drop cable names the building it ends in"
         : "") +
       ")",
   );
@@ -727,8 +740,12 @@ export function toTextMapV2(
       const onStr = ns ? ` on=${ns.id} "${ns.name}"` : "";
       detail = `${e.kind}${serves}${onStr}${nearStr}`;
     }
+    // World facts: street= (oracle nearestStreetName — matches the grader) on
+    // every equipment; up= (homing device toward the source) on non-source rows.
+    const streetWF = worldFacts ? ` street=${nearestStreetName(scene, e.position) ?? "none"}` : "";
+    const upWF = worldFacts && e.kind !== "co" ? ` up=${sourceId}` : "";
     lines.push(
-      `  ${padRight(e.id, 8)} ${marker}  (${col},${row})  x=${xM(e.position)} y=${yM(e.position)}  ${detail} inside=${under}${dStreetStr}`,
+      `  ${padRight(e.id, 8)} ${marker}  (${col},${row})  x=${xM(e.position)} y=${yM(e.position)}  ${detail} inside=${under}${dStreetStr}${streetWF}${upWF}`,
     );
   }
   scene.buildings.forEach((b, bi) => {
@@ -756,8 +773,12 @@ export function toTextMapV2(
     // hull= is a per-entity world fact — interior iff the building is in the
     // oracle's interiorBuildings set (same function), else perimeter.
     const hull = worldFacts ? ` hull=${interiorIds?.has(b.id) ? "interior" : "perimeter"}` : "";
+    // World facts: street= (oracle nearestStreetName — matches nearest_offstreet's
+    // grader) and served_by= (inverse of the closures' serves= lists).
+    const streetWFb = worldFacts ? ` street=${nearestStreetName(scene, b.centroid) ?? "none"}` : "";
+    const servedWF = worldFacts ? ` served_by=${servedBy.get(b.id) ?? "none"}` : "";
     lines.push(
-      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}${dc}${ext}${hull}`,
+      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}${dc}${ext}${hull}${streetWFb}${servedWF}`,
     );
   });
 
@@ -806,8 +827,11 @@ export function toTextMapV2(
       const m = rings
         ? `  m[${xM(c.path[0])},${yM(c.path[0])}]->[${xM(c.path[c.path.length - 1])},${yM(c.path[c.path.length - 1])}]`
         : "";
+      // World fact: terminates_in= names the building a drop cable ends in (its
+      // target when that target is a building); omitted for closure→closure cables.
+      const term = worldFacts && buildingById.has(c.targetId) ? `  terminates_in=${c.targetId}` : "";
       lines.push(
-        `  ${padRight(c.id, 14)} ${padRight(c.kind, 13)} ${c.sourceId} -> ${c.targetId}  (${a0},${ar0})->(${a1},${ar1})${m}`,
+        `  ${padRight(c.id, 14)} ${padRight(c.kind, 13)} ${c.sourceId} -> ${c.targetId}  (${a0},${ar0})->(${a1},${ar1})${m}${term}`,
       );
     }
   }

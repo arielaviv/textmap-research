@@ -177,15 +177,38 @@ const SCAN_TARGETS_BY_ID: Record<string, string> = {
  *  mixed 36.7→63.3) while read-bound categories regressed under blanket tools. */
 const TOOL_CATEGORIES = new Set<Category>(["line-intersection", "crossing", "mixed"]);
 
-/** Count parseable geometry tool lines (mirrors geo-tools' lenient parser). */
+/** Tool-mode crossing hint: crossing is answered by the batch geometry executor,
+ *  not by reading grid glyphs. Replaces the glyph-reading crossing hint whenever
+ *  the executor is active (see hint assembly below). */
+const TOOL_CROSSING_HINT =
+  "This is answered by the geometry executor, not by reading grid glyphs. Emit ONE " +
+  "segments_cross_polygons call: include EVERY cable from CABLES as a segment (use its m[...] " +
+  "meter endpoints), EVERY building's FOOTPRINTS ring, and for each cable set exclude to the " +
+  "building it terminates at (its terminates_in=, or the target of source -> target when that " +
+  "target is a building; else empty). Your answer = the union of cables the tool reports " +
+  "crossing a non-excluded building.";
+
+/** Count parseable geometry tool lines (mirrors geo-tools' lenient parser). A
+ *  segments_cross_polygons line is credited by its segment count so a truncated
+ *  batch (fewer segments than cables) still trips the coverage bound. */
 function countToolOps(raw: string): number {
   let n = 0;
   for (const r of raw.split("\n")) {
     const line = r.trim().replace(/^```(json)?|```$/g, "");
     if (!line.startsWith("{")) continue;
     try {
-      const o = JSON.parse(line) as { op?: unknown };
-      if (o && typeof o === "object" && typeof o.op === "string") n++;
+      const o = JSON.parse(line) as { op?: unknown; segments?: unknown };
+      if (o && typeof o === "object" && typeof o.op === "string") {
+        if (
+          o.op === "segments_cross_polygons" &&
+          typeof o.segments === "object" &&
+          o.segments !== null
+        ) {
+          n += Object.keys(o.segments as Record<string, unknown>).length;
+        } else {
+          n++;
+        }
+      }
     } catch {
       /* ignore */
     }
@@ -352,12 +375,25 @@ export async function runEval(
 
   await runPool(tasks, config.concurrency ?? 6, async (t) => {
     const q = activeQuestions[t.qIndex];
+    // Tool routing (prereg 2026-07-17): blanket tools REGRESS read-bound
+    // categories (containment 100→70 — the legend precomputes them and the
+    // tool round tempts recomputation on self-marshaled inputs). Routed mode
+    // fires the executor only where computation is genuinely needed.
+    const toolsActive = config.tools && (!config.toolsRouted || TOOL_CATEGORIES.has(q.category));
     let rep = compose(t.arm, bundles.get(t.scene.id)!, config.isolate);
     if (config.fewshot) {
       const example = fewshotFor(t.arm);
       if (example) rep = { ...rep, text: `${example}=== THE REAL SCENE ===\n${rep.text}` };
     }
-    let baseQuestion = q.prompt(t.scene) + (config.hints ? hintFor(q.id, t.arm) : "");
+    // When the executor answers crossing, the glyph-reading crossing hint is
+    // replaced by the tool-mode hint (union the batch executor's reported hits).
+    let baseQuestion =
+      q.prompt(t.scene) +
+      (config.hints
+        ? toolsActive && q.category === "crossing"
+          ? `\nHINT: ${TOOL_CROSSING_HINT}`
+          : hintFor(q.id, t.arm)
+        : "");
     if (config.citations) {
       baseQuestion +=
         "\nAlso fill `evidence`: for EVERY id in your answer, one string quoting the exact " +
@@ -407,13 +443,6 @@ export async function runEval(
     let outputTokens = scanTokensOut;
     let latencyMs = scanLatency;
 
-    // Tool routing (prereg 2026-07-17): blanket tools REGRESS read-bound
-    // categories (containment 100→70 — the legend precomputes them and the
-    // tool round tempts recomputation on self-marshaled inputs). Routed mode
-    // fires the executor only where computation is genuinely needed.
-    const toolsActive =
-      config.tools && (!config.toolsRouted || TOOL_CATEGORIES.has(q.category));
-
     let toolsText: string | undefined;
     if (toolsActive) {
       // Tool round: the model reads coordinates out of the representation and
@@ -424,12 +453,24 @@ export async function runEval(
       // ONLY legitimate signals — tool-call well-formedness and a coverage
       // bound from the scene's OWN entity counts — NEVER the oracle, grade,
       // true answer, or planted facts.
+      // Per-category recommendation: point the model at the reducer op that
+      // makes the engine (not the LLM) do the filter/argmin/enumerate work.
+      let toolNudge = "";
+      if (q.category === "crossing" || q.category === "line-intersection")
+        toolNudge = "\nPrefer a single segments_cross_polygons call.";
+      else if (q.category === "mixed" && q.id === "road_misplacement")
+        toolNudge =
+          "\nUse filter_threshold over each equipment's d_street= value (cmp le, threshold from the question).";
+      else if (q.category === "mixed" && q.id === "nearest_offstreet")
+        toolNudge =
+          "\nUse nearest_where: target = the building, exclude_value = the building's street=, candidates = each closure with its street=.";
       const toolPrompt =
         "Do NOT answer yet. Decide which geometry computations the question below needs, " +
         "read every required coordinate from the representation, and reply with ONLY JSON " +
         "tool lines.\n" +
         GEO_TOOLS_SPEC +
-        `\n\nQUESTION (for context only):\n${q.prompt(t.scene)}`;
+        `\n\nQUESTION (for context only):\n${q.prompt(t.scene)}` +
+        toolNudge;
       const maxToolTurns = config.selfCorrect ? Math.min(Math.max(config.turns ?? 1, 1), 4) : 1;
       let toolFeedback = "";
       let toolResults: string | null = null;
