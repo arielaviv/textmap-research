@@ -295,7 +295,13 @@ export async function toMapImage(
 
 export async function buildRepresentations(
   scene: Scene,
-  opts: { zoom?: number; extents?: boolean; rings?: boolean; feeds?: boolean } = {},
+  opts: {
+    zoom?: number;
+    extents?: boolean;
+    rings?: boolean;
+    feeds?: boolean;
+    worldFacts?: boolean;
+  } = {},
 ): Promise<RepresentationBundle> {
   const image = await toMapImage(scene);
   const tmOpts = {
@@ -303,6 +309,7 @@ export async function buildRepresentations(
     extents: opts.extents,
     rings: opts.rings,
     feeds: opts.feeds,
+    worldFacts: opts.worldFacts,
   };
   return {
     json: toJSON(scene),

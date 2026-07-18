@@ -70,6 +70,7 @@ const selfCorrect = process.argv.includes("--self-correct");
 const extents = process.argv.includes("--extents");
 const rings = process.argv.includes("--rings");
 const feeds = process.argv.includes("--feeds");
+const worldFacts = process.argv.includes("--world-facts");
 const citations = process.argv.includes("--citations");
 const zoom = Number(arg("zoom", "1"));
 const fewshot = process.argv.includes("--fewshot");
@@ -119,6 +120,7 @@ async function main() {
       ...(extents ? { extents: true } : {}),
       ...(rings ? { rings: true } : {}),
       ...(feeds ? { feeds: true } : {}),
+      ...(worldFacts ? { worldFacts: true } : {}),
       ...(citations ? { citations: true } : {}),
       ...(zoom > 1 ? { zoom } : {}),
       ...(fewshot ? { fewshot: true } : {}),

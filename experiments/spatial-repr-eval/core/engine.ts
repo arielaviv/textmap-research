@@ -81,6 +81,9 @@ export interface EvalConfig {
   /** v2.7 labeled artifact revision: homing topology (`feeds=`) stated on the
    *  source row — closes the path category's unstated-convention gap. */
   feeds?: boolean;
+  /** Per-entity world-fact legend fields (`hull=` interior/perimeter) in the
+   *  textmap — targets the mixed category's enclosure task. */
+  worldFacts?: boolean;
   /** Evidence citations: the answer must cite, per id, the representation line
    *  that justifies it. Grader ignores citations — the forcing function is the
    *  point (careful scanning, less hallucination). */
@@ -155,6 +158,18 @@ const SCAN_TARGETS: Partial<Record<Category, string>> = {
     "id and every fact the representation states about its position relative to streets " +
     "(the street it sits on, its distance to the nearest street, or its coordinates if " +
     "that is all the representation provides). Do NOT extract serves lists or buildings.",
+};
+
+/** Per-question scan overrides (win over the category target). nearest_offstreet
+ *  is a two-relation "mixed" task the generic scan collapses; this brief extracts
+ *  ONLY the intermediates — the target's home street and each off-street closure's
+ *  distance — and explicitly forbids ranking or naming the answer, so no ground
+ *  truth is computed in the extraction phase. */
+const SCAN_TARGETS_BY_ID: Record<string, string> = {
+  nearest_offstreet:
+    "identify the target building named in the question and state its HOME STREET (its nearest street from the legend). " +
+    "Then list EVERY closure whose OWN nearest street (on=) is DIFFERENT from that home street, each with its distance to the target building. " +
+    "Do NOT choose an answer — only extract the home street and this candidate list with distances.",
 };
 
 /** Compute-bound categories — where the tools-validation error analysis showed
@@ -289,6 +304,7 @@ export async function runEval(
         extents: config.extents,
         rings: config.rings,
         feeds: config.feeds,
+        worldFacts: config.worldFacts,
       }),
     );
   }
@@ -360,6 +376,7 @@ export async function runEval(
       // extraction that garbled the serves graph (path 90→15 in screening).
       // The mechanism is unchanged; only WHAT to extract routes by category.
       const target =
+        SCAN_TARGETS_BY_ID[q.id] ??
         (config.scanTargets ? SCAN_TARGETS[q.category] : undefined) ??
         "extract from the representation every fact relevant to the question below — " +
           "one line per relevant entity, with its exact ids and measurements as they " +

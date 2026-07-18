@@ -24,11 +24,12 @@
  *    column identity before the model reads it. v2 space-separates cells so
  *    each cell keeps its own token and rulers align 1:1 with content.
  *
- * Pure + dependency-light (only ./geo) so it unit-tests without pulling the
- * heavy zone-text-twin module that representations.ts imports.
+ * Pure + dependency-light (only ./geo and ./oracle, both pure) so it unit-tests
+ * without pulling the heavy zone-text-twin module that representations.ts imports.
  */
 
 import { haversineMeters, pointInPolygon, pointToPolylineMeters } from "./geo";
+import { interiorBuildings } from "./oracle";
 import type { Coord, Scene, SceneBounds, SceneBuilding } from "./scene";
 
 const GRID_W = 48;
@@ -396,6 +397,7 @@ export function toTextMapV2(
     extents?: boolean;
     rings?: boolean;
     feeds?: boolean;
+    worldFacts?: boolean;
   } = {},
 ): string {
   // protocol=false strips the READING-PROTOCOL lines (cross-reference rule,
@@ -416,11 +418,17 @@ export function toTextMapV2(
   // source row (`feeds=` list) — a world fact of the scene model that the
   // representation previously left unstated; its absence made rigorous
   // readers refuse the conventional path answer (catscan smoke, 2026-07-16).
+  // worldFacts (labeled artifact revision) tags each building interior/perimeter
+  // (hull=) — a per-entity world fact of the same class as inside=/d_closure=,
+  // targeting the mixed category's enclosure task. Membership is the oracle's
+  // interiorBuildings verbatim so the legend and the grader never disagree.
   const protocol = opts.protocol !== false;
   const zoom = Math.max(1, Math.min(opts.zoom ?? 1, 2));
   const extents = opts.extents === true;
   const rings = opts.rings === true;
   const feeds = opts.feeds === true;
+  const worldFacts = opts.worldFacts === true;
+  const interiorIds = worldFacts ? new Set(interiorBuildings(scene)) : null;
   const { minLng, minLat, maxLng, maxLat } = scene.bounds;
   const widthM = Math.max(1, haversineMeters([minLng, minLat], [maxLng, minLat]));
   const heightM = Math.max(1, haversineMeters([minLng, minLat], [minLng, maxLat]));
@@ -679,6 +687,10 @@ export function toTextMapV2(
         ? "; ext= is the building's exact footprint bounding box in meters, same frame as x=/y= " +
           "— for geometric computations use ext=, never grid cells"
         : "") +
+      (worldFacts
+        ? "; hull= marks each building interior (its centroid lies inside the cluster's convex " +
+          "hull, off the boundary) or perimeter (its centroid is on the hull boundary)"
+        : "") +
       ")",
   );
   for (const e of scene.equipment) {
@@ -741,8 +753,11 @@ export function toTextMapV2(
       const ys = b.footprint.map(yM);
       ext = ` ext=x${Math.min(...xs)}..${Math.max(...xs)} y${Math.min(...ys)}..${Math.max(...ys)}`;
     }
+    // hull= is a per-entity world fact — interior iff the building is in the
+    // oracle's interiorBuildings set (same function), else perimeter.
+    const hull = worldFacts ? ` hull=${interiorIds?.has(b.id) ? "interior" : "perimeter"}` : "";
     lines.push(
-      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}${dc}${ext}`,
+      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}${dc}${ext}${hull}`,
     );
   });
 
