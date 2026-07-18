@@ -29,7 +29,7 @@
  */
 
 import { haversineMeters, pointInPolygon, pointToPolylineMeters } from "./geo";
-import { interiorBuildings, nearestStreetName } from "./oracle";
+import { nearestStreetName } from "./oracle";
 import type { Coord, Scene, SceneBounds, SceneBuilding } from "./scene";
 
 const GRID_W = 48;
@@ -418,17 +418,19 @@ export function toTextMapV2(
   // source row (`feeds=` list) — a world fact of the scene model that the
   // representation previously left unstated; its absence made rigorous
   // readers refuse the conventional path answer (catscan smoke, 2026-07-16).
-  // worldFacts (labeled artifact revision) tags each building interior/perimeter
-  // (hull=) — a per-entity world fact of the same class as inside=/d_closure=,
-  // targeting the mixed category's enclosure task. Membership is the oracle's
-  // interiorBuildings verbatim so the legend and the grader never disagree.
+  // worldFacts (labeled artifact revision) adds per-entity structural fields
+  // (street=, served_by=, up=, terminates_in=) — world facts of the same class
+  // as inside=/d_closure=. NOTE: the hull= field was REMOVED after the
+  // 2026-07-19 independent audit — it printed the enclosure grader's own
+  // interiorBuildings() output per-entity (the answer verbatim, not a neutral
+  // fact). Enclosure now rides the convex_hull executor op like the other
+  // compute categories.
   const protocol = opts.protocol !== false;
   const zoom = Math.max(1, Math.min(opts.zoom ?? 1, 2));
   const extents = opts.extents === true;
   const rings = opts.rings === true;
   const feeds = opts.feeds === true;
   const worldFacts = opts.worldFacts === true;
-  const interiorIds = worldFacts ? new Set(interiorBuildings(scene)) : null;
   const { minLng, minLat, maxLng, maxLat } = scene.bounds;
   const widthM = Math.max(1, haversineMeters([minLng, minLat], [maxLng, minLat]));
   const heightM = Math.max(1, haversineMeters([minLng, minLat], [minLng, maxLat]));
@@ -634,10 +636,14 @@ export function toTextMapV2(
   };
 
   const buildingById = new Map(scene.buildings.map((b) => [b.id, b]));
-  // World-fact reverse lookups (question-agnostic, same class as inside=/hull=):
+  // World-fact reverse lookups (question-agnostic, same class as inside=):
   //   servedBy — the closure whose serves= list contains a building (inverse of
   //   the printed serves=); sourceId — the source (kind=co) every non-source
   //   device homes to in the current star model (up=).
+  // Audit note: pathToSource filters kind === "closure"; this map iterates all
+  // equipment. Divergence is impossible in current scenes (only closures carry
+  // serves lists), and the closure filter here would mask a real modeling bug
+  // if a cabinet ever served a building — kept intentionally broad.
   const servedBy = new Map<string, string>();
   for (const e of scene.equipment) {
     for (const bid of e.serves) if (!servedBy.has(bid)) servedBy.set(bid, e.id);
@@ -697,9 +703,7 @@ export function toTextMapV2(
           "— for geometric computations use ext=, never grid cells"
         : "") +
       (worldFacts
-        ? "; hull= marks each building interior (its centroid lies inside the cluster's convex " +
-          "hull, off the boundary) or perimeter (its centroid is on the hull boundary)" +
-          "; street= names the nearest street (the same identity the on= label uses) for both " +
+        ? "; street= names the nearest street (the same identity the on= label uses) for both " +
           "buildings and equipment; served_by= on a building names the closure whose serves= list " +
           "contains it (none if unserved); up= on each non-source equipment names the device it " +
           "homes to toward the source; terminates_in= on a drop cable names the building it ends in"
@@ -770,15 +774,13 @@ export function toTextMapV2(
       const ys = b.footprint.map(yM);
       ext = ` ext=x${Math.min(...xs)}..${Math.max(...xs)} y${Math.min(...ys)}..${Math.max(...ys)}`;
     }
-    // hull= is a per-entity world fact — interior iff the building is in the
-    // oracle's interiorBuildings set (same function), else perimeter.
-    const hull = worldFacts ? ` hull=${interiorIds?.has(b.id) ? "interior" : "perimeter"}` : "";
     // World facts: street= (oracle nearestStreetName — matches nearest_offstreet's
     // grader) and served_by= (inverse of the closures' serves= lists).
+    // (hull= removed post-audit: it was the enclosure answer verbatim.)
     const streetWFb = worldFacts ? ` street=${nearestStreetName(scene, b.centroid) ?? "none"}` : "";
     const servedWF = worldFacts ? ` served_by=${servedBy.get(b.id) ?? "none"}` : "";
     lines.push(
-      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}${dc}${ext}${hull}${streetWFb}${servedWF}`,
+      `  ${padRight(b.id, 8)} ${marker}  (${col},${row})  x=${xM(b.centroid)} y=${yM(b.centroid)}  ${b.type} floors=${b.floors}${addr}${dc}${ext}${streetWFb}${servedWF}`,
     );
   });
 

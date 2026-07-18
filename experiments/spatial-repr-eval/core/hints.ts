@@ -50,18 +50,25 @@ export const HINTS: Record<string, Hint> = {
     },
   },
 
-  // Error: models trace grid glyphs for connectivity (path accuracy jumped
-  // +35 when the GEOMETRY vs TOPOLOGY protocol line was added; residual
-  // failures still show glyph-traced orderings).
+  // Error: models trace grid glyphs / cable geometry for connectivity (path
+  // accuracy jumped +35 when the GEOMETRY vs TOPOLOGY protocol line was added;
+  // residual failures still show glyph-traced orderings). The generic hint must
+  // stay field-neutral — served_by=/up=/feeds= exist ONLY in the textmap legend,
+  // so naming them to the json/wkt arms misdirects those arms (audit fix).
   topology: {
     generic:
-      "Answer from the LEGEND only — never the grids and never the CABLES section (cables are " +
-      "geometry and may include decoy closure-to-closure links that are NOT the homing path; " +
-      "there is no cable from a closure to the source). The FIRST (nearest) item is the closure " +
-      "that serves the target building: its served_by= field, or the closure whose serves= list " +
-      "contains the building. Then home to the source: follow that device's up= field (or, if " +
-      "absent, the CO row's feeds= list) until you reach the source (kind=co, marker *), which " +
-      "is the LAST item. Fill equipmentPath in that order — equipment ids only, never cable ids.",
+      "Answer from the stated serving relationships only — never by tracing cable geometry " +
+      "(cables may include decoy closure-to-closure links that are NOT the homing path; there " +
+      "is no cable from a closure to the source). The FIRST (nearest) item is the closure that " +
+      "serves the target building — the one whose serves list contains it. The LAST item is the " +
+      "network source (kind=co). Fill equipmentPath in that order — equipment ids only, never " +
+      "cable ids.",
+    byArm: {
+      textmap2:
+        "Use the LEGEND fields: the first item is the building's served_by= closure (or the " +
+        "closure whose serves= list contains it). Then home to the source by following up= (or, " +
+        "if absent, the CO row's feeds= list) until you reach the source (kind=co, marker *).",
+    },
   },
 
   // Error: both arms name 1–3 wrong buildings (blockage wrong=58 per arm,

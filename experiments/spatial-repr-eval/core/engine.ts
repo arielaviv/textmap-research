@@ -160,42 +160,49 @@ const SCAN_TARGETS: Partial<Record<Category, string>> = {
     "that is all the representation provides). Do NOT extract serves lists or buildings.",
 };
 
-/** Per-question scan overrides (win over the category target). nearest_offstreet
- *  is a two-relation "mixed" task the generic scan collapses; this brief extracts
- *  ONLY the intermediates — the target's home street and each off-street closure's
- *  distance — and explicitly forbids ranking or naming the answer, so no ground
- *  truth is computed in the extraction phase. */
-const SCAN_TARGETS_BY_ID: Record<string, string> = {
-  nearest_offstreet:
-    "identify the target building named in the question and state its HOME STREET (its nearest street from the legend). " +
-    "Then list EVERY closure whose OWN nearest street (on=) is DIFFERENT from that home street, each with its distance to the target building. " +
-    "Do NOT choose an answer — only extract the home street and this candidate list with distances.",
-};
-
 /** Compute-bound categories — where the tools-validation error analysis showed
  *  the executor transforms results (line-intersection 0→90, crossing 35→60,
  *  mixed 36.7→63.3) while read-bound categories regressed under blanket tools. */
 const TOOL_CATEGORIES = new Set<Category>(["line-intersection", "crossing", "mixed"]);
 
 /** Tool-mode crossing hint: crossing is answered by the batch geometry executor,
- *  not by reading grid glyphs. Replaces the glyph-reading crossing hint whenever
- *  the executor is active (see hint assembly below). */
-const TOOL_CROSSING_HINT =
-  "This is answered by the geometry executor, not by reading grid glyphs. Emit ONE " +
-  "segments_cross_polygons call: include EVERY cable from CABLES as a segment (use its m[...] " +
-  "meter endpoints), EVERY building's FOOTPRINTS ring, and for each cable set exclude to the " +
-  "building it terminates at (its terminates_in=, or the target of source -> target when that " +
-  "target is a building; else empty). Your answer = the union of cables the tool reports " +
-  "crossing a non-excluded building.";
+ *  not read off the representation. Replaces the reading crossing hint whenever
+ *  the executor is active (see hint assembly below). Arm-aware wording (audit
+ *  fix): the textmap variant names legend artifacts (m[...], FOOTPRINTS,
+ *  terminates_in=) that other arms don't have — naming them to json/wkt
+ *  misdirects those arms. */
+function toolCrossingHint(arm: ArmId): string {
+  if (arm === "textmap2" || arm === "textmap" || arm === "textmap2np") {
+    return (
+      "This is answered by the geometry executor, not by reading grid glyphs. Emit ONE " +
+      "segments_cross_polygons call: include EVERY cable from CABLES as a segment (use its m[...] " +
+      "meter endpoints), EVERY building's FOOTPRINTS ring, and for each cable set exclude to the " +
+      "building it terminates at (its terminates_in=, or the target of source -> target when that " +
+      "target is a building; else empty). Your answer = the union of cables the tool reports " +
+      "crossing a non-excluded building."
+    );
+  }
+  return (
+    "This is answered by the geometry executor. Emit ONE segments_cross_polygons call: include " +
+    "EVERY cable as a segment (its two endpoint coordinates from the data), EVERY building's " +
+    "footprint ring, and for each cable set exclude to the building it terminates at (its target " +
+    "when that target is a building; else empty). Your answer = the union of cables the tool " +
+    "reports crossing a non-excluded building."
+  );
+}
 
 /** Count parseable geometry tool lines (mirrors geo-tools' lenient parser). A
  *  segments_cross_polygons line is credited by its segment count so a truncated
- *  batch (fewer segments than cables) still trips the coverage bound. */
+ *  batch (fewer segments than cables) still trips the coverage bound. Capped at
+ *  the executor's MAX_LINES (60) — audit fix: lines past the cap never execute,
+ *  so crediting them let a >60-line reply satisfy coverage it didn't earn. */
 function countToolOps(raw: string): number {
   let n = 0;
+  let lines = 0;
   for (const r of raw.split("\n")) {
     const line = r.trim().replace(/^```(json)?|```$/g, "");
     if (!line.startsWith("{")) continue;
+    if (++lines > 60) break;
     try {
       const o = JSON.parse(line) as { op?: unknown; segments?: unknown };
       if (o && typeof o === "object" && typeof o.op === "string") {
@@ -391,7 +398,7 @@ export async function runEval(
       q.prompt(t.scene) +
       (config.hints
         ? toolsActive && q.category === "crossing"
-          ? `\nHINT: ${TOOL_CROSSING_HINT}`
+          ? `\nHINT: ${toolCrossingHint(t.arm)}`
           : hintFor(q.id, t.arm)
         : "");
     if (config.citations) {
@@ -411,8 +418,11 @@ export async function runEval(
       // collapses connectivity questions — the answer call anchors on an
       // extraction that garbled the serves graph (path 90→15 in screening).
       // The mechanism is unchanged; only WHAT to extract routes by category.
+      // (The nearest_offstreet per-question override was removed: measured
+      // backfire — prose decomposition 40→30 — and post-street= it pointed the
+      // scan at on=, the wrong field. The category target + nearest_where
+      // routing carry that question now.)
       const target =
-        SCAN_TARGETS_BY_ID[q.id] ??
         (config.scanTargets ? SCAN_TARGETS[q.category] : undefined) ??
         "extract from the representation every fact relevant to the question below — " +
           "one line per relevant entity, with its exact ids and measurements as they " +
@@ -455,15 +465,20 @@ export async function runEval(
       // true answer, or planted facts.
       // Per-category recommendation: point the model at the reducer op that
       // makes the engine (not the LLM) do the filter/argmin/enumerate work.
+      // Arm-aware nudges (audit fix): d_street=/street= are legend fields; for
+      // json/wkt the same op is named with representation-neutral wording.
+      const isTextmapArm = t.arm === "textmap2" || t.arm === "textmap" || t.arm === "textmap2np";
       let toolNudge = "";
       if (q.category === "crossing" || q.category === "line-intersection")
         toolNudge = "\nPrefer a single segments_cross_polygons call.";
       else if (q.category === "mixed" && q.id === "road_misplacement")
-        toolNudge =
-          "\nUse filter_threshold over each equipment's d_street= value (cmp le, threshold from the question).";
+        toolNudge = isTextmapArm
+          ? "\nUse filter_threshold over each equipment's d_street= value (cmp le, threshold from the question)."
+          : "\nUse point_to_line_m per equipment against the street centerlines, then filter_threshold over those distances (cmp le, threshold from the question).";
       else if (q.category === "mixed" && q.id === "nearest_offstreet")
-        toolNudge =
-          "\nUse nearest_where: target = the building, exclude_value = the building's street=, candidates = each closure with its street=.";
+        toolNudge = isTextmapArm
+          ? "\nUse nearest_where: target = the building, exclude_value = the building's street=, candidates = each closure with its street=."
+          : "\nUse nearest_where: target = the building, exclude_value = the building's nearest street name, candidates = each closure with its own nearest street name.";
       const toolPrompt =
         "Do NOT answer yet. Decide which geometry computations the question below needs, " +
         "read every required coordinate from the representation, and reply with ONLY JSON " +
