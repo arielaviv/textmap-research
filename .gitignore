@@ -13,3 +13,5 @@ sft-weights/
 fresh-url.txt
 presigned-url.txt
 colab-*.py
+sft-data-v3/*.jsonl
+sft-data-v2add/

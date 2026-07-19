@@ -1,0 +1,73 @@
+{
+  "generated": "sft-generate-v2",
+  "scenes": 240,
+  "seedBase": 60000,
+  "tileStats": {
+    "accepted": 240,
+    "rejected": 136
+  },
+  "templateTotal": 310,
+  "heldoutReserved": [
+    "farthest_closure",
+    "count_crossing",
+    "mid_between_closures",
+    "same_side_street",
+    "ho_count_inside",
+    "ho_closer",
+    "ho_bearing",
+    "ho_midpoint",
+    "ho_quadrant",
+    "ho_rank3"
+  ],
+  "families": {
+    "containment": 400,
+    "onstreet": 400,
+    "nearest": 400,
+    "coverage_gap": 400,
+    "topology": 400,
+    "crossing": 772,
+    "blockage": 756,
+    "enclosure": 520,
+    "road_misplacement": 792,
+    "nearest_offstreet": 760,
+    "count_kind": 400,
+    "count_on_street": 398,
+    "street_of": 398,
+    "same_street_pair": 382,
+    "serves_lookup": 400,
+    "served_by_lookup": 400,
+    "cable_endpoints": 400,
+    "degree": 400,
+    "path_hops": 400,
+    "hull_membership": 704,
+    "quadrant_of": 382,
+    "unserved": 400,
+    "bearing8": 380,
+    "dist_pair": 800,
+    "rank_k_closures": 430,
+    "within_radius_count": 558,
+    "nearest_building_to_closure": 688,
+    "offstreet_variant": 800,
+    "crossing_boolean": 788,
+    "equipment_in_quadrant": 42
+  },
+  "skins": {
+    "water": 2432,
+    "ftth": 2350,
+    "sensor": 2478,
+    "logistics": 2482,
+    "electric": 2400,
+    "generic": 3008
+  },
+  "counts": {
+    "train": 14847,
+    "val": 303
+  },
+  "skipped": {
+    "sceneFails": 40,
+    "gradeFails": 0,
+    "concludeFails": 164,
+    "familySkips": 661
+  },
+  "approxTokensM": 72
+}
