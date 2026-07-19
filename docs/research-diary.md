@@ -594,3 +594,79 @@ dataset (scenes rebuilt byte-identical from their seeds), a real failure
 gallery (geojson/wkt/PNG graded items), MapEval-style composition
 figures, GPSBench-style ground-truth formulas (MathJax), strategically
 positioned related work, discussion/limitations, ODbL attribution.
+
+
+## 2026-07-19 (late) — the canary characterization: FT damaged the reasoning channel
+
+Full 5-config scoreboard on identical items (40; 2 scenes, seeds 2020-2021),
+student = the $40 20%-epoch checkpoint on its dedicated endpoint, base =
+untrained gpt-oss-20b, both under the full scaffold:
+
+    config          textmap  json   tok/item  s/item
+    canary fast        60      15      473      3.2
+    canary low         45      20    1,593       —
+    canary high        40      30    1,634       —
+    base   low         80      35    2,311     21.3
+    base   high        65      25    3,837     36.2
+    (teacher ref: haiku = 92)
+
+Two shocks. First, base-at-Reasoning:low scored **80** — the committed
+prediction was ~45, a 35-point miss (the earlier fair-base run at HIGH had
+scored 65; LIGHT thinking is this model's best mode on our scaffold, heavy
+thinking overthinks past it). An open $0.05/M model at 80 with our pipeline
+is itself a paper-worthy datapoint — pending n=100 confirmation.
+
+Second, the canary **degrades monotonically as reasoning effort rises**
+(60 → 45 → 40) while the base improves from fast (unusable: empties) to
+low (80). The CSV autopsy made the mechanism unambiguous: at forced
+Reasoning:high the canary answers every enumerate-class question with an
+EMPTY ARRAY in a couple hundred tokens (containment [] @179 tok,
+coverage_gap [] @159, crossing [], blockage [] — same items the base fills
+correctly with ["CL-I"], ["B-5","B-9"], three drops). Not a data-balance
+artifact — only 9.1% of training answers are empty arrays (sampled
+n=2,969). The v3 targets are terse final answers with NO reasoning
+content, so on a Harmony reasoning model every gradient step teaches the
+answer format AND "think nothing": the analysis channel is trained toward
+empty. At 20% of an epoch the model has learned to stop deliberating
+before absorbing the competence deliberation used to supply — so it emits
+the minimum-loss guess, []. Chain-of-thought is computation performed in
+the generated tokens; a policy trained not to generate them loses the
+ability's output even though the circuitry (a LoRA away) is intact.
+
+Why v1-8B never hit this: Llama-3.1-8B is a non-reasoning base scoring
+~30s — nothing to damage, everything to gain (→53). gpt-oss-20b's 80 IS
+its deliberation; the same data pulled one model up and the other down.
+SFT moves a model toward the data; our data sits at "answers like a 53-60
+model, instantly."
+
+**Decision (pre-agreed rule: <55 at low → pause): the $145 continuation is
+PAUSED.** More of the same targets pushes further in the same direction —
+v1's fully-trained 53 looks like the ceiling of format-without-reasoning.
+
+**v3.1 — self-distillation.** Fix the targets, retrain fresh:
+teacher = the untrained base at Reasoning:low under the full scaffold,
+posed the task-bank examples on fresh eval-disjoint train tiles; traces
+survive only if the final answer grades correct (rejection sampling —
+core families via the real graders, bank families via normalized
+deep-equality). Together's fine-tune format accepts a `reasoning` field
+on assistant turns (and per-message `weight`), so the teacher's analysis
+trace trains the analysis channel directly — same channel at train and
+inference. The "Reasoning: low" directive is present when asking the
+teacher but stripped from the stored system turn: low-effort deliberation
+becomes the default, not a string-triggered mode. Because the teacher
+skips tools (and fails) on many compute questions, tool supervision would
+thin out post-filter — so a slice of v3's 5-message rows rides along with
+the terse final turn at weight 0, keeping the correct-by-construction
+marshal turns without re-teaching answer-without-thinking.
+
+Built as sft-distill.mts; smoke (6 conversations): reasoning harvested on
+every distilled row, oracle pass 83%, marshal slice weighted 1/0, skins
+verified in-trace (the sample deliberates over HB-1/DP-A — the logistics
+vocabulary). Gates before the ~$100: (1) teacher confirm n=100 fresh
+seeds; (2) trace-in-target inspection of sample rows; (3) exact-price
+quote via the billing-limit trick; (4) 20% micro-canary, pass = best-mode
+≥70 AND no degradation with effort — the monotonic drop is the signature
+of the defect, its absence is the proof of the fix. Bar for the finished
+model unchanged: ≥80 at its best mode on held-out seeds, else the recipe
+failed and the paper ships on representation + scaffold + this negative
+result.
