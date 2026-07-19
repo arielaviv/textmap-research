@@ -1,0 +1,81 @@
+{
+  "byCat": {
+    "on-street": {
+      "n": 10,
+      "ok": 9
+    },
+    "containment": {
+      "n": 10,
+      "ok": 10
+    },
+    "nearest": {
+      "n": 10,
+      "ok": 10
+    },
+    "coverage": {
+      "n": 10,
+      "ok": 10
+    },
+    "path": {
+      "n": 10,
+      "ok": 10
+    },
+    "crossing": {
+      "n": 10,
+      "ok": 10
+    },
+    "mixed": {
+      "n": 30,
+      "ok": 24
+    },
+    "line-intersection": {
+      "n": 10,
+      "ok": 9
+    }
+  },
+  "byQ": {
+    "onstreet": {
+      "n": 10,
+      "ok": 9
+    },
+    "containment": {
+      "n": 10,
+      "ok": 10
+    },
+    "nearest": {
+      "n": 10,
+      "ok": 10
+    },
+    "coverage_gap": {
+      "n": 10,
+      "ok": 10
+    },
+    "topology": {
+      "n": 10,
+      "ok": 10
+    },
+    "crossing": {
+      "n": 10,
+      "ok": 10
+    },
+    "road_misplacement": {
+      "n": 10,
+      "ok": 9
+    },
+    "blockage": {
+      "n": 10,
+      "ok": 9
+    },
+    "nearest_offstreet": {
+      "n": 10,
+      "ok": 9
+    },
+    "enclosure": {
+      "n": 10,
+      "ok": 6
+    }
+  },
+  "composite": 92,
+  "tin": 4320792,
+  "tout": 147591
+}

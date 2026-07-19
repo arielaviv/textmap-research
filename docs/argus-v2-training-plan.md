@@ -28,7 +28,7 @@ before generating data / spending on the 20B.
   **`hull=` was REMOVED** after the 2026-07-19 independent audit: it printed the
   enclosure grader's own `interiorBuildings()` output per-entity — the answer
   verbatim, not a world-fact. Enclosure now rides the `convex_hull` executor op
-  (genuine marshal-compute); expect a few points off the 93 on re-measure.
+  (genuine marshal-compute). Measured cost: enclosure 80→60 out-of-sample.
 - **Reading pipeline:** category-aware scan, fixed per-category hints (topology bug
   fixed; `containment`/`onstreet`/`nearest` added; tool-mode `crossing`), citations,
   zoom. No self-correction, no voting.
@@ -112,9 +112,16 @@ tokens/latency/hallucination, Wilson CI + McNemar.
   over the whole bundled slice and rejected against ALL 100 lattice tiles —
   disjoint from every legacy eval seed by construction.
 - The 93 was measured on the exact 10 scenes (seeds 2000-2009) the improvements
-  were tuned on — **in-sample**. The firm-up run must use fresh lattice
-  residues, e.g. seeds **2020-2059** (residues 20-59, never used for tuning),
-  and report 2000-2019 separately for comparability.
+  were tuned on — **in-sample**.
+- **OUT-OF-SAMPLE RESULT (2026-07-19, sc-fresh.mts, results-fresh.json): 92.0**
+  (n=100, seeds 2020-2029 — residues never used for tuning, post-audit config).
+  Per-question: containment/nearest/coverage/topology/crossing 100;
+  onstreet/road_misplacement/blockage/**nearest_offstreet 90** (offstreet
+  60→90 — removing the scan override HELPED); **enclosure 60** (the honest
+  post-hull= compute path; now the genuine-reasoning residual). The hints and
+  legend are family-level, not instance-tuned: instance generalization holds
+  (93 in-sample → 92 out-of-sample). **Bands in §4 stand as written.**
+  Headline the 92, footnote the 93.
 
 ## 5. Honesty ledger (for the paper)
 
