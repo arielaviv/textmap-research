@@ -60,6 +60,11 @@ const SKIN_ID = arg("skin", "ftth");
 const CONC = Number(arg("concurrency", "6"));
 const API_BASE = arg("api-base", "https://api.together.xyz").replace(/\/$/, "");
 const API_MODE = arg("api-mode", "openai"); // openai | tgi
+// Token caps — reasoning models (gpt-oss) spend heavily in the analysis
+// channel BEFORE the final content; caps must leave room for both, or empty
+// finals get graded as wrong (measured: 19/40 empties on base at 1500/6000).
+const MT_ANSWER = Number(arg("mt-answer", "1500"));
+const MT_TOOLS = Number(arg("mt-tools", "6000"));
 const KEY = process.env[arg("key-env", "TOGETHER_API_KEY")];
 if (!MODEL || !KEY) {
   console.error("need --model and an API key in the env named by --key-env");
@@ -313,8 +318,20 @@ function llamaPrompt(messages: Msg[]): string {
   return `${p}<|start_header_id|>assistant<|end_header_id|>\n\n`;
 }
 
+/** One attempt with a hard 240s timeout; askOnce errors surface as AskRes.error. */
 async function ask(messages: Msg[], maxTokens: number): Promise<AskRes> {
+  // one retry on timeout/transport error — a single hung stream must never
+  // stall a worker forever (measured: the first fair-base run wedged on this)
+  const first = await askOnce(messages, maxTokens);
+  if (first.error && !/^\d{3}:/.test(first.error)) {
+    return askOnce(messages, maxTokens);
+  }
+  return first;
+}
+
+async function askOnce(messages: Msg[], maxTokens: number): Promise<AskRes> {
   const t0 = Date.now();
+  try {
   if (API_MODE === "tgi") {
     const r = await fetch(`${API_BASE}/generate`, {
       method: "POST",
@@ -323,6 +340,7 @@ async function ask(messages: Msg[], maxTokens: number): Promise<AskRes> {
         inputs: llamaPrompt(messages),
         parameters: { max_new_tokens: maxTokens, do_sample: false, return_full_text: false },
       }),
+      signal: AbortSignal.timeout(240_000),
     });
     const latencyMs = Date.now() - t0;
     if (!r.ok)
@@ -335,6 +353,7 @@ async function ask(messages: Msg[], maxTokens: number): Promise<AskRes> {
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${KEY}` },
     body: JSON.stringify({ model: MODEL, temperature: 0, max_tokens: maxTokens, messages, stream: false }),
+    signal: AbortSignal.timeout(240_000),
   });
   const latencyMs = Date.now() - t0;
   if (!r.ok)
@@ -349,6 +368,9 @@ async function ask(messages: Msg[], maxTokens: number): Promise<AskRes> {
     outputTokens: data.usage?.completion_tokens ?? 0,
     latencyMs,
   };
+  } catch (e) {
+    return { error: `transport: ${(e as Error).message.slice(0, 100)}`, inputTokens: 0, outputTokens: 0, latencyMs: Date.now() - t0 };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -458,7 +480,7 @@ async function main(): Promise<void> {
     let error = "";
 
     if (isCompute) {
-      const r1 = await ask([sys, user1], 6000);
+      const r1 = await ask([sys, user1], MT_TOOLS);
       inputTokens += r1.inputTokens;
       outputTokens += r1.outputTokens;
       latencyMs += r1.latencyMs;
@@ -476,7 +498,7 @@ async function main(): Promise<void> {
           role: "user",
           content: skinFwd(`${TOOL_RESULTS_PREFIX}\n${resultsText}\n\nNow give the final answer as the line: ANSWER: {json}`),
         };
-        const r2 = await ask([sys, user1, { role: "assistant", content: r1.text }, user2], 1500);
+        const r2 = await ask([sys, user1, { role: "assistant", content: r1.text }, user2], MT_ANSWER);
         inputTokens += r2.inputTokens;
         outputTokens += r2.outputTokens;
         latencyMs += r2.latencyMs;
@@ -484,7 +506,7 @@ async function main(): Promise<void> {
         else finalText = r2.text;
       }
     } else {
-      const r1 = await ask([sys, user1], 1500);
+      const r1 = await ask([sys, user1], MT_ANSWER);
       inputTokens += r1.inputTokens;
       outputTokens += r1.outputTokens;
       latencyMs += r1.latencyMs;

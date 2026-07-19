@@ -446,3 +446,151 @@ same-seed control folded into the cat-scan validation. Voting/turns and
 few-shot DROPPED after screening (negative results, kept in the record).
 Then: paper build (Task 18), SFT paper-2 (Qwen3-8B LoRA on Together,
 hints+scan traces baked into training, ~$20-45, separate budget).
+
+
+---
+
+## 2026-07-18 — Tier 0–2: the pipeline goes 75.5 → 93 (in-sample)
+
+Killed the executor-verified **self-correct loop** first: coverage-gated
+retries measured +1.7 (noise) at ~$8 — the OptiMind correction loop
+presupposes a verifier-rich domain (a solver that can say *infeasible*);
+geometry computes wrong inputs silently, so there is no signal to correct
+against. Negative result kept; loop dropped from the recipe.
+
+Overnight 5-agent research (docs/pipeline-improvements-research.md)
+converged on one principle: **move every reduce/enumerate/filter/argmin
+step into the executor; materialize every question-agnostic world-fact
+into the legend; make each hint name the right field.** Shipped as:
+
+- `fe0fe02` — hint fixes. The `topology` hint was actively WRONG (walked
+  CABLES source→target "up to the CO" — no closure→CO cable exists, plus a
+  decoy closure-closure link). Added containment/onstreet/nearest hints
+  (onstreet: use `d_street<=8`, IGNORE `on=` — an identity label, not a
+  placement claim).
+- `fb18e50` — three **reducer ops** (`segments_cross_polygons`,
+  `filter_threshold`, `nearest_where`: the engine does the enumerate/
+  threshold/argmin on model-supplied values only) + **worldFacts legend
+  fields** (`street=`, `served_by=`, `up=`, `terminates_in=`, `hull=`).
+
+Validation (sc-validate.mts, n=100, seeds 2000-2009): **93.0** —
+crossing 60→100, road_misplacement 50→100, path→100, nearest_offstreet
+→60, enclosure 80. Tokens 4.3M in / 136k out (~$5).
+
+## 2026-07-19 — Independent audit, out-of-sample 92, and the lattice bug
+
+Commissioned a fresh-context adversarial audit of the whole pipeline
+(integrity, symmetry, grader leniency, honesty framing). Verdict: 93
+genuine, executor integrity-clean, graders strict. Three real findings:
+
+1. **`hull=` was the answer verbatim** — it printed the enclosure grader's
+   own `interiorBuildings()` output per entity. REMOVED; enclosure now
+   rides the `convex_hull` executor op (genuine marshal-compute).
+2. **The 93 was in-sample** — measured on the exact 10 scenes the
+   improvements were tuned against.
+3. **THE LATTICE BUG**: `aoiForCity` jitter is `((seed*73)%100)` — it
+   depends only on `seed % 100`, so every historical seed collapses onto
+   a 100-tile lattice, and v1's "disjoint" train seeds 51000+i sat on
+   EXACTLY the eval AOIs of 2000+i. v1 real-NYC training was fully
+   geographically contaminated. (v1 still only scored 53 — but a reviewer
+   would have been right to kill it.)
+
+Also fixed from the audit: arm-aware tool hints/nudges (the tool-mode
+crossing hint had named textmap-only fields to json/wkt), `countToolOps`
+capped at the executor's 60-line limit, and the `nearest_offstreet` scan
+override removed (its prose decomposition had measured 40→30, and
+post-`street=` it pointed the scan at the wrong field).
+
+**Out-of-sample validation** (sc-fresh.mts, seeds 2020-2029 — lattice
+residues never used during tuning, post-audit config): **92.0**.
+nearest_offstreet 60→**90** (the scan-override removal was worth +30);
+enclosure 80→**60** (the price of deleting hull= — now the genuine
+compute residual); everything else 90–100. Instance generalization holds:
+the hints/legend are family-level, not scene-tuned. Headline the 92,
+footnote the 93.
+
+## v2 dataset — Defects A/B/C closed
+
+- `core/task-bank.ts`: 30 trained families, **310 unique templates**,
+  novel output schemas ({count},{meters},{direction},{quadrant},{street},
+  {sameStreet},{onHull},{endpoints}), 10 reserved held-out families.
+- `sft-generate-v2.mts`: **(A)** real 2-call masked traces — TOOL_RESULTS
+  rides a USER turn (train_on_inputs=false masks it); executor output is
+  genuinely computed by geo-tools; pre-tool turns carry marshals only,
+  never conclusions; every label must pass its own grader (0 grade-fails);
+  executor/oracle disagreements skipped and counted (164). **(B)** the
+  template bank above, whole families held out. **(C)** train tiles hashed
+  over the full bundled slice and REJECTED against all 100 lattice tiles —
+  geographic disjointness from every legacy eval seed by construction
+  (136 candidate tiles rejected). Plus 6 vocabulary skins (~20% generic).
+- Output: **14,847 train + 303 val** from 200 scenes. chars/4 estimated
+  ~72M tokens; Together's tokenizer counted **121M** — JSON-heavy text
+  runs ~chars/2.9. (This 40% underestimate broke every cost projection.)
+- `sft-eval-v2.mts`: the matching 2-call inference loop (+skin
+  reverse-mapping for vocabulary-invariance tests; later hardened with
+  240s request timeouts + retry after a hung stream wedged a run).
+
+**Naming settled: GeoGlyph** for representation, bench and models
+(GeoGlyph-Bench, GeoGlyph-8B/20B). Argus rejected (collides with our own
+satellite engine + several ML ARGUS papers); AtlasLLM rejected (Meta's
+Atlas + the X-LLM suffix curse).
+
+## 2026-07-19 — the 20B micro-canary (path B)
+
+Real prices, learned the cheap way (billing-limit cancellations quote the
+exact cost for free): 8B epoch **$67.74** (ft-23dde913-767e), 20B epoch
+**$188.92** (ft-5d059873-fcbb). At those prices the "$33 8B canary before
+the $200 20B" insurance logic was dead — replaced with a **20%-subset
+micro-canary on the 20B itself** (tests the flagship's OWN risks: Harmony
+format, MXFP4, expert-MLP adapters — the same pitfalls OptiMind's A.7
+documents working around with Unsloth/FSDP2).
+
+**ft-6ecd701c-450c**: 2,969 examples (first 20% of the shuffled set,
+train-part1.jsonl), LoRA r32/α64 all-linear, lr 5e-5, 1 epoch,
+train_on_inputs=false. **$40.10, 12m30s, train loss 0.92→0.40** (eval
+0.4152 — no gap). Together's fine-tune→serving path now works (their
+engineering fixed the dropdown/weight-translation bug); endpoint
+`geoglyph-p1` on 1×H200 ($0.11/min). Gotchas: the CLI `endpoints` command
+is project-scope-blind (create 403s, list shows empty while a UI endpoint
+serves) — endpoints via UI only; the Together WAF 403s python-urllib UAs
+(use curl / node fetch).
+
+**Mechanics gate: PASSED** (sft-eval-v2, 40 items, seeds 2020-2021):
+tools fired on compute questions, **0 marshal-fails, 0 errors, no
+hallucinated TOOL_RESULTS** — the masked-2-call recipe trains. Score at
+20%-data/1-epoch: **textmap 60.0** (above fully-trained v1's 53), json 15.
+
+**Base-model control** (untrained gpt-oss-20b, same scaffold, same items).
+First run: 55/10 — but **19/40 EMPTY responses**: the base's reasoning
+tokens ate the max_tokens caps before the final channel produced anything
+(predicted in advance as the anti-base bias; the mini-probe at a 250-token
+cap had already shown an empty final). Fair rerun at 8k/12k caps
+(prediction committed first: ~70 textmap / ~30 json):
+
+**base-fair: textmap 65.0 (3 residual empties), json 25.0** — both inside
+the predicted bands. Verdict on the canary:
+
+    accuracy: 12/20 vs 13/20 — a statistical tie (one item, n=20)
+    tokens:   473 vs 3,837 per item (8.1x)
+    latency:  3.2s vs 36.2s per item (11.3x)
+    errors:   0 vs 3; marshal-fails 0 vs 0; base skipped the tool
+              protocol on most compute questions (crossing 0/4)
+
+Reading: at 20% of one epoch the student already matches the thinking
+base while spending an eighth of the tokens — the distillation is moving
+reasoning into weights, accuracy expected to follow with data (loss still
+descending at cutoff). Queued discriminators for the next endpoint
+session: canary at forced reasoning-effort-high, ±external-scan,
+±hint-with-TOOL_RESULTS.
+
+Continuation ready: part2 (11,878 ex) uploaded as
+file-94929882-0f34-4e46-b327-9081da02fc6e; continue-from-checkpoint
+≈$145 completes the epoch with the $40 inside it. Balance $15.67;
+awaiting ~$150 top-up.
+
+Separately: the results page (GeoGlyph-Results/index.html) grew into the
+full paper draft — worked transcripts pulled verbatim from the released
+dataset (scenes rebuilt byte-identical from their seeds), a real failure
+gallery (geojson/wkt/PNG graded items), MapEval-style composition
+figures, GPSBench-style ground-truth formulas (MathJax), strategically
+positioned related work, discussion/limitations, ODbL attribution.
